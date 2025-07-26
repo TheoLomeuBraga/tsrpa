@@ -27,6 +27,9 @@ namespace TSRPA
 
     namespace Palette
     {
+        const Color256 INVISIBLE(0, 0, 0, 0);
+        const Color256 BLACK(0, 0, 0, 255);
+        const Color256 WHITE(255, 255, 255, 255);
         const Color256 RED(255, 0, 0, 255);
         const Color256 GREEN(0, 255, 0, 255);
         const Color256 BLUE(0, 0, 255, 255);
@@ -85,12 +88,14 @@ namespace TSRPA
     public:
         unsigned int width;
         unsigned int height;
+        unsigned int data_size;
         FrameBuffer *frame_buffer;
 
         Render(unsigned int width, unsigned int height)
         {
             this->width = width;
             this->height = height;
+            this->data_size = this->width * this->height * 4;
             frame_buffer = new FrameBuffer(this->width, this->height);
         }
         ~Render()
@@ -105,19 +110,23 @@ namespace TSRPA
 
         void clear()
         {
-            
+            frame_buffer->clear();
         }
 
         void draw_point(unsigned int x, unsigned int y, const Color256 &color)
         {
+            
             const unsigned int i = (y * width + x) * 4;
+            if (i + 3 >= data_size -1){
+                return;
+            }
             frame_buffer->data[i] = color.r;
             frame_buffer->data[i + 1] = color.g;
             frame_buffer->data[i + 2] = color.b;
             frame_buffer->data[i + 3] = color.a;
         }
 
-        void draw_line(glm::vec2 a,  glm::vec2 b, const Color256 &color)
+        bool draw_line(glm::vec2 a,  glm::vec2 b, const Color256 &color)
         {
 
             bool steep = false;
@@ -154,6 +163,7 @@ namespace TSRPA
                     error2 -= dx * 2;
                 }
             }
+            return true;
         }
     };
 
