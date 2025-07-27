@@ -14,28 +14,27 @@
 class Mesh
 {
 public:
-    std::vector<unsigned int> index;
+    unsigned int vert_count;
     std::vector<float> vertex;
     std::vector<float> uv;
     std::vector<float> normal;
+    std::vector<float> color;
     Mesh() {}
-    Mesh(std::vector<unsigned int> index, std::vector<float> vertex)
+    Mesh(std::vector<float> vertex)
     {
-        this->index = index;
         this->vertex = vertex;
     }
-    Mesh(std::vector<unsigned int> index, std::vector<float> vertex, std::vector<float> uv)
+    Mesh(std::vector<float> vertex, std::vector<float> uv)
     {
-        this->index = index;
         this->vertex = vertex;
         this->uv = uv;
     }
     Mesh(std::vector<unsigned int> index, std::vector<float> vertex, std::vector<float> uv, std::vector<float> normal)
     {
-        this->index = index;
         this->vertex = vertex;
         this->uv = uv;
         this->normal = normal;
+        this->color = normal;
     }
 };
 
@@ -48,6 +47,7 @@ public:
 
         std::string inputfile = path;
         tinyobj::ObjReaderConfig reader_config;
+        reader_config.triangulate = true;
 
         tinyobj::ObjReader reader;
 
@@ -77,29 +77,30 @@ public:
                 {
                     // access to vertex
                     tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
-                    tinyobj::real_t vx = attrib.vertices[3 * size_t(idx.vertex_index) + 0];
-                    tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
-                    tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
+                    this->vertex.push_back(attrib.vertices[3 * size_t(idx.vertex_index) + 0]);
+                    this->vertex.push_back(attrib.vertices[3 * size_t(idx.vertex_index) + 1]);
+                    this->vertex.push_back(attrib.vertices[3 * size_t(idx.vertex_index) + 2]);
 
                     // Check if `normal_index` is zero or positive. negative = no normal data
                     if (idx.normal_index >= 0)
                     {
-                        tinyobj::real_t nx = attrib.normals[3 * size_t(idx.normal_index) + 0];
-                        tinyobj::real_t ny = attrib.normals[3 * size_t(idx.normal_index) + 1];
-                        tinyobj::real_t nz = attrib.normals[3 * size_t(idx.normal_index) + 2];
+                        this->normal.push_back(attrib.normals[3 * size_t(idx.normal_index) + 0]);
+                        this->normal.push_back(attrib.normals[3 * size_t(idx.normal_index) + 1]);
+                        this->normal.push_back(attrib.normals[3 * size_t(idx.normal_index) + 2]);
                     }
 
                     // Check if `texcoord_index` is zero or positive. negative = no texcoord data
                     if (idx.texcoord_index >= 0)
                     {
-                        tinyobj::real_t tx = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
-                        tinyobj::real_t ty = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
+                        this->uv.push_back(attrib.texcoords[2 * size_t(idx.texcoord_index) + 0]);
+                        this->uv.push_back(attrib.texcoords[2 * size_t(idx.texcoord_index) + 1]);
                     }
 
                     // Optional: vertex colors
-                    // tinyobj::real_t red   = attrib.colors[3*size_t(idx.vertex_index)+0];
-                    // tinyobj::real_t green = attrib.colors[3*size_t(idx.vertex_index)+1];
-                    // tinyobj::real_t blue  = attrib.colors[3*size_t(idx.vertex_index)+2];
+                    this->color.push_back(attrib.colors[3*size_t(idx.vertex_index)+0]);
+                    this->color.push_back(attrib.colors[3*size_t(idx.vertex_index)+1]);
+                    this->color.push_back(attrib.colors[3*size_t(idx.vertex_index)+2]);
+
                 }
                 index_offset += fv;
 
@@ -107,56 +108,21 @@ public:
                 shapes[s].mesh.material_ids[f];
             }
         }
+        this->vert_count = this->vertex.size() / 3;
     }
 };
 
-void render_model_points(TSRPA::Render &ren, const char *path)
-{
-    printf("drawing: %s\n", path);
-
-    std::string inputfile = path;
-    tinyobj::ObjReaderConfig reader_config;
-
-    tinyobj::ObjReader reader;
-
-    if (!reader.ParseFromFile(inputfile, reader_config))
-    {
-        if (!reader.Error().empty())
-        {
-            std::cerr << "TinyObjReader: " << reader.Error();
-        }
-        return;
+void render_model_with_points(TSRPA::Render &ren, const Mesh &mesh,const TSRPA::Color256 &color){
+    for(unsigned int i = 0; i < mesh.vert_count;i++){
+        
+        float vx = mesh.vertex[(i * 3) + 0];
+        float vy = mesh.vertex[(i * 3) + 1];
+        printf("vertex count: %i %f %f\n",i,(vx + 1.0) * ren.width / 2.0, ren.height - (vy + 1.0) * ren.height / 2.0);
+        ren.draw_point((vx + 1.0) * ren.width / 2.0, ren.height - (vy + 1.0) * ren.height / 2.0,color);
     }
+}
 
-    const tinyobj::attrib_t &attrib = reader.GetAttrib();
-    const std::vector<tinyobj::shape_t> &shapes = reader.GetShapes();
-    const std::vector<tinyobj::material_t> &materials = reader.GetMaterials();
-
-    for (size_t s = 0; s < shapes.size(); s++)
-    {
-        // Loop over faces(polygon)
-        size_t index_offset = 0;
-        for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++)
-        {
-            size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
-
-            // Loop over vertices in the face.
-            for (size_t v = 0; v < fv; v++)
-            {
-                // access to vertex
-                tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
-                tinyobj::real_t vx = attrib.vertices[3 * size_t(idx.vertex_index) + 0];
-                tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
-                tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
-
-                ren.draw_point((vx + 1.0) * ren.width / 2.0, ren.height - (vy + 1.0) * ren.height / 2.0, TSRPA::Palette::WHITE);
-            }
-            index_offset += fv;
-
-            // per-face material
-            shapes[s].mesh.material_ids[f];
-        }
-    }
+void render_model_with_lines(TSRPA::Render &ren, const Mesh &mesh,const TSRPA::Color256 &color){
 }
 
 int main(int argc, char *argv[])
@@ -234,14 +200,16 @@ int main(int argc, char *argv[])
 
                 ObjMesh mesh(event.drop.data);
 
-                render_model_points(ren, event.drop.data);
+                //render_model_with_points(ren, event.drop.data);
+                render_model_with_lines(ren,mesh,TSRPA::Palette::GREEN);
+                render_model_with_points(ren,mesh,TSRPA::Palette::RED);
 
                 break;
             }
         }
 
         // Do game logic, present a frame, etc.
-        SDL_RenderClear(render);
+        //SDL_RenderClear(render);
         SDL_UpdateTexture(texture, NULL, (void *)ren.get_result(), pich);
         SDL_RenderTexture(render, texture, NULL, NULL);
         SDL_RenderPresent(render);
