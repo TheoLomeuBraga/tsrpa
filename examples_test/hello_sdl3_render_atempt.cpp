@@ -97,10 +97,9 @@ public:
                     }
 
                     // Optional: vertex colors
-                    this->color.push_back(attrib.colors[3*size_t(idx.vertex_index)+0]);
-                    this->color.push_back(attrib.colors[3*size_t(idx.vertex_index)+1]);
-                    this->color.push_back(attrib.colors[3*size_t(idx.vertex_index)+2]);
-
+                    this->color.push_back(attrib.colors[3 * size_t(idx.vertex_index) + 0]);
+                    this->color.push_back(attrib.colors[3 * size_t(idx.vertex_index) + 1]);
+                    this->color.push_back(attrib.colors[3 * size_t(idx.vertex_index) + 2]);
                 }
                 index_offset += fv;
 
@@ -112,36 +111,33 @@ public:
     }
 };
 
-void render_model_with_points(TSRPA::Render &ren, const Mesh &mesh,const TSRPA::Color256 &color){
-    for(unsigned int i = 0; i < mesh.vert_count;i++){
-        
+void render_model_with_points(TSRPA::Render &ren, const Mesh &mesh, const TSRPA::Color256 &color)
+{
+    for (unsigned int i = 0; i < mesh.vert_count; i++)
+    {
+
         float vx = mesh.vertex[(i * 3) + 0];
         float vy = mesh.vertex[(i * 3) + 1];
-        ren.draw_point((vx + 1.0) * ren.width / 2.0, ren.height - (vy + 1.0) * ren.height / 2.0,color);
+        ren.draw_point((vx + 1.0) * ren.width / 2.0, ren.height - (vy + 1.0) * ren.height / 2.0, color);
     }
 }
 
-void render_triangle_with_lines(TSRPA::Render &ren,const glm::vec3 &a,const glm::vec3 &b,const glm::vec3 &c,const TSRPA::Color256 &color){
-    glm::vec2 va((a.x + 1.0) * ren.width / 2.0, ren.height - (a.y + 1.0) * ren.height / 2.0);
-    glm::vec2 vb((b.x + 1.0) * ren.width / 2.0, ren.height - (b.y + 1.0) * ren.height / 2.0);
-    glm::vec2 vc((c.x + 1.0) * ren.width / 2.0, ren.height - (c.y + 1.0) * ren.height / 2.0);
+void render_model_with_lines(TSRPA::Render &ren, const Mesh &mesh, const TSRPA::Color256 &color)
+{
 
-    ren.draw_line(va,vb,color);
-    ren.draw_line(vb,vc,color);
-    ren.draw_line(vc,va,color);
-}
+    for (unsigned int i = 0; i < mesh.vert_count-1; i+=2)
+    {
 
-void render_model_with_lines(TSRPA::Render &ren, const Mesh &mesh,const TSRPA::Color256 &color){
-    
-    for(unsigned int i = 0; i < mesh.vert_count;i+=3){
-        
-        glm::vec3 a(mesh.vertex[(i * 3) + 0],mesh.vertex[(i * 3) + 1],mesh.vertex[(i * 3) + 2]);
-        glm::vec3 b(mesh.vertex[(i * 3) + 3],mesh.vertex[(i * 3) + 4],mesh.vertex[(i * 3) + 5]);
-        glm::vec3 c(mesh.vertex[(i * 3) + 6],mesh.vertex[(i * 3) + 7],mesh.vertex[(i * 3) + 8]);
-        render_triangle_with_lines(ren,a,b,c,color);
+        glm::vec2 va(mesh.vertex[(i * 3) + 0],mesh.vertex[(i * 3) + 1]);
+        glm::vec2 a((va.x + 1.0) * ren.width / 2.0, ren.height - (va.y + 1.0) * ren.height / 2.0);
 
+        glm::vec2 vb(mesh.vertex[(i * 3) + 3],mesh.vertex[(i * 3) + 4]);
+        glm::vec2 b((vb.x + 1.0) * ren.width / 2.0, ren.height - (vb.y + 1.0) * ren.height / 2.0);
+
+        ren.draw_line(a,b,color);
+        //ren.draw_point(a.x,a.y,color);
+        //ren.draw_point(b.x,b.y,color);
     }
-    
 }
 
 int main(int argc, char *argv[])
@@ -179,7 +175,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    TSRPA::Render ren(512, 512);
+    TSRPA::Render ren(512/2, 512/2);
     ren.frame_buffer->clear_color = TSRPA::Palette::INVISIBLE;
     ren.clear();
 
@@ -219,16 +215,15 @@ int main(int argc, char *argv[])
 
                 ObjMesh mesh(event.drop.data);
 
-                //render_model_with_points(ren, event.drop.data);
-                render_model_with_lines(ren,mesh,TSRPA::Palette::GREEN);
-                render_model_with_points(ren,mesh,TSRPA::Palette::RED);
+                render_model_with_lines(ren, mesh, TSRPA::Palette::GREEN);
+                //render_model_with_points(ren, mesh, TSRPA::Palette::RED);
 
                 break;
             }
         }
 
         // Do game logic, present a frame, etc.
-        //SDL_RenderClear(render);
+        // SDL_RenderClear(render);
         SDL_UpdateTexture(texture, NULL, (void *)ren.get_result(), pich);
         SDL_RenderTexture(render, texture, NULL, NULL);
         SDL_RenderPresent(render);
