@@ -117,12 +117,31 @@ void render_model_with_points(TSRPA::Render &ren, const Mesh &mesh,const TSRPA::
         
         float vx = mesh.vertex[(i * 3) + 0];
         float vy = mesh.vertex[(i * 3) + 1];
-        printf("vertex count: %i %f %f\n",i,(vx + 1.0) * ren.width / 2.0, ren.height - (vy + 1.0) * ren.height / 2.0);
         ren.draw_point((vx + 1.0) * ren.width / 2.0, ren.height - (vy + 1.0) * ren.height / 2.0,color);
     }
 }
 
+void render_triangle_with_lines(TSRPA::Render &ren,const glm::vec3 &a,const glm::vec3 &b,const glm::vec3 &c,const TSRPA::Color256 &color){
+    glm::vec2 va((a.x + 1.0) * ren.width / 2.0, ren.height - (a.y + 1.0) * ren.height / 2.0);
+    glm::vec2 vb((b.x + 1.0) * ren.width / 2.0, ren.height - (b.y + 1.0) * ren.height / 2.0);
+    glm::vec2 vc((c.x + 1.0) * ren.width / 2.0, ren.height - (c.y + 1.0) * ren.height / 2.0);
+
+    ren.draw_line(va,vb,color);
+    ren.draw_line(vb,vc,color);
+    ren.draw_line(vc,va,color);
+}
+
 void render_model_with_lines(TSRPA::Render &ren, const Mesh &mesh,const TSRPA::Color256 &color){
+    
+    for(unsigned int i = 0; i < mesh.vert_count;i+=3){
+        
+        glm::vec3 a(mesh.vertex[(i * 3) + 0],mesh.vertex[(i * 3) + 1],mesh.vertex[(i * 3) + 2]);
+        glm::vec3 b(mesh.vertex[(i * 3) + 3],mesh.vertex[(i * 3) + 4],mesh.vertex[(i * 3) + 5]);
+        glm::vec3 c(mesh.vertex[(i * 3) + 6],mesh.vertex[(i * 3) + 7],mesh.vertex[(i * 3) + 8]);
+        render_triangle_with_lines(ren,a,b,c,color);
+
+    }
+    
 }
 
 int main(int argc, char *argv[])
@@ -160,7 +179,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    TSRPA::Render ren(256, 256);
+    TSRPA::Render ren(512, 512);
     ren.frame_buffer->clear_color = TSRPA::Palette::INVISIBLE;
     ren.clear();
 
