@@ -15,7 +15,7 @@ set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(glm)
 add_subdirectory(examples_test/libs/SDL)
 add_subdirectory(examples_test/libs/SDL_image)
-include_directories( ./ examples_test/libs/SDL/include examples_test/libs/SDL_image/include examples_test/tiny_obj_loader)
+include_directories( ./ examples_test/libs/SDL/include examples_test/libs/SDL_image/include examples_test/libs/tiny_obj_loader)
 
 add_executable(hello_sdl3 examples_test/hello_sdl3.cpp)
 target_link_options(hello_sdl3 PRIVATE -static-libgcc -static-libstdc++)
