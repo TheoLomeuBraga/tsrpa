@@ -1,0 +1,6 @@
+[submodule "examples_test/libs/SDL"]
+	path = examples_test/libs/SDL
+	url = https://github.com/libsdl-org/SDL.git
+[submodule "examples_test/libs/SDL_image"]
+	path = examples_test/libs/SDL_image
+	url = https://github.com/libsdl-org/SDL_image.git
