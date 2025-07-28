@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <cmath>
+#include <functional>
 #include <glm/glm.hpp>
 
 namespace TSRPA
@@ -95,6 +96,97 @@ namespace TSRPA
         }
     };
 
+    enum DeephMode
+    {
+        NONE = 0,
+        LESS = 1,
+        GREATER = 2,
+    };
+
+    class ZBuffer
+    {
+
+    public:
+        unsigned int width;
+        unsigned int height;
+        float *data;
+
+    private:
+        DeephMode mode;
+        std::function<bool(unsigned int, float)> deep_check_func;
+
+        bool deep_check_none(unsigned int idx, float value) { return true; }
+        bool deep_check_less(unsigned int idx, float value)
+        {
+            if (data[idx] < value)
+            {
+                data[idx] = value;
+                return true;
+            }
+            return false;
+        }
+        bool deep_check_greater(unsigned int idx, float value)
+        {
+            if (data[idx] > value)
+            {
+                data[idx] = value;
+                return true;
+            }
+            return false;
+        }
+
+    public:
+        bool calculate_deep_check(unsigned int idx, float value)
+        {
+            return deep_check_func(idx, value);
+        }
+
+        ZBuffer() {}
+        ZBuffer(unsigned int width, unsigned int height)
+        {
+            this->width = width;
+            this->height = height;
+            this->data = new float[width * height];
+            this->mode = DeephMode::NONE;
+            deep_check_func = std::bind(&ZBuffer::deep_check_none, this, std::placeholders::_1, std::placeholders::_2);
+        }
+
+        void set_deeph_mode(DeephMode mode)
+        {
+            this->mode = mode;
+            switch (mode)
+            {
+            case 0:
+                deep_check_func = std::bind(&ZBuffer::deep_check_none, this, std::placeholders::_1, std::placeholders::_2);
+                break;
+            case 1:
+                deep_check_func = std::bind(&ZBuffer::deep_check_less, this, std::placeholders::_1, std::placeholders::_2);
+                break;
+            case 2:
+                deep_check_func = std::bind(&ZBuffer::deep_check_greater, this, std::placeholders::_1, std::placeholders::_2);
+                break;
+            }
+        }
+
+        DeephMode get_deeph_mode()
+        {
+            return this->mode;
+        }
+
+        void clear()
+        {
+            for (unsigned int i = 0; i < width * height; i++)
+            {
+                data[i] = 0;
+            }
+        }
+
+        ~ZBuffer()
+        {
+            delete[] this->data;
+        }
+    };
+
     class Render
     {
     public:
@@ -102,6 +194,7 @@ namespace TSRPA
         unsigned int height;
         unsigned int data_size;
         FrameBuffer *frame_buffer;
+        ZBuffer *zbuffer;
 
         Render(unsigned int width, unsigned int height)
         {
@@ -109,10 +202,12 @@ namespace TSRPA
             this->height = height;
             this->data_size = this->width * this->height * 4;
             frame_buffer = new FrameBuffer(this->width, this->height);
+            zbuffer = new ZBuffer(this->width, this->height);
         }
         ~Render()
         {
             delete frame_buffer;
+            delete zbuffer;
         }
 
         unsigned char *get_result()
@@ -123,6 +218,7 @@ namespace TSRPA
         void clear()
         {
             frame_buffer->clear();
+            zbuffer->clear();
         }
 
         void draw_point(const unsigned int &x, const unsigned int &y, const Color256 &color)
@@ -133,6 +229,7 @@ namespace TSRPA
             {
                 return;
             }
+
             frame_buffer->data[i] = color.r;
             frame_buffer->data[i + 1] = color.g;
             frame_buffer->data[i + 2] = color.b;
@@ -209,6 +306,48 @@ namespace TSRPA
                 for (int j = A.x; j <= B.x; j++)
                 {
                     draw_point(j, a.y + i, color);
+                }
+            }
+        }
+
+        glm::vec3 barycentric(const glm::vec3 *pts, const glm::vec3 &P)
+        {
+            glm::vec3 u = glm::cross(glm::vec3(pts[2][0] - pts[0][0], pts[1][0] - pts[0][0], pts[0][0] - P[0]), glm::vec3(pts[2][1] - pts[0][1], pts[1][1] - pts[0][1], pts[0][1] - P[1]));
+            if (std::abs(u.z) < 1)
+            {
+                return glm::vec3(-1, 1, 1);
+            }
+            return glm::vec3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
+        }
+
+        void draw_triangle(const glm::vec3 *points, const Color256 &color)
+        {
+            glm::ivec2 bboxmin(width - 1, height - 1);
+            glm::ivec2 bboxmax(0, 0);
+            glm::ivec2 clamp(width - 1, height - 1);
+            for (int i = 0; i < 3; i++)
+            {
+                bboxmin.x = std::max(0, (int)std::min(bboxmin.x, (int)points[i].x));
+                bboxmin.y = std::max(0, (int)std::min(bboxmin.y, (int)points[i].y));
+
+                bboxmax.x = std::min(clamp.x, std::max(bboxmax.x, (int)points[i].x));
+                bboxmax.y = std::min(clamp.y, std::max(bboxmax.y, (int)points[i].y));
+            }
+            glm::vec3 P;
+            for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++)
+            {
+                for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
+                {
+                    glm::vec3 bc_screen = barycentric(points, P);
+                    if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
+                        continue;
+                    P.z = 0;
+                    for (int i = 0; i < 3; i++)
+                        P.z += points[i][2] * bc_screen[i];
+                    if (zbuffer->calculate_deep_check(int(P.x + P.y * width),P.z))
+                    {
+                        draw_point(P.x, P.y, color);
+                    }
                 }
             }
         }

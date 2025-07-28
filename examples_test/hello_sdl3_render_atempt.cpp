@@ -174,7 +174,36 @@ void render_model_triangles_with_light(TSRPA::Render &ren, const TSRPA::Mesh &me
         glm::vec3 n = glm::normalize(glm::cross(vc-va,vb-va));
         float intensity = glm::dot(n,light_rit);
         if(intensity < 0.0){continue;}
+        
         ren.draw_basic_triangle(a,b,c, TSRPA::Color256(intensity*255, intensity*255, intensity*255, 255));
+        
+    }
+}
+
+void render_model_triangles_with_deeph_and_light(TSRPA::Render &ren, const TSRPA::Mesh &mesh,const glm::vec3 &light_rit)
+{
+
+    ren.zbuffer->set_deeph_mode(TSRPA::DeephMode::LESS);
+
+    for (unsigned int i = 0; i < mesh.vert_count; i+=3)
+    {
+
+        glm::vec3 points[3];
+
+        glm::vec3 va(mesh.vertex[(i * 3) + 0],mesh.vertex[(i * 3) + 1],mesh.vertex[(i * 3) + 2]);
+        points[0] = glm::vec3((va.x + 1.0) * ren.width / 2.0, ren.height - (va.y + 1.0) * ren.height / 2.0,va.z);
+
+        glm::vec3 vb(mesh.vertex[(i * 3) + 3],mesh.vertex[(i * 3) + 4],mesh.vertex[(i * 3) + 5]);
+        points[1] = glm::vec3((vb.x + 1.0) * ren.width / 2.0, ren.height - (vb.y + 1.0) * ren.height / 2.0,vb.z);
+
+        glm::vec3 vc(mesh.vertex[(i * 3) + 6],mesh.vertex[(i * 3) + 7],mesh.vertex[(i * 3) + 8]);
+        points[2] = glm::vec3((vc.x + 1.0) * ren.width / 2.0, ren.height - (vc.y + 1.0) * ren.height / 2.0,vc.z);
+
+        glm::vec3 n = glm::normalize(glm::cross(vc-va,vb-va));
+        float intensity = glm::dot(n,light_rit);
+        if(intensity < 0.0){continue;}
+        
+        ren.draw_triangle(points, TSRPA::Color256(intensity*255, intensity*255, intensity*255, 255));
         
     }
 }
@@ -259,7 +288,8 @@ int main(int argc, char *argv[])
                 //render_model_with_lines(ren, mesh, TSRPA::Palette::GREEN);
                 //render_model_with_points(ren, mesh, TSRPA::Palette::RED);
                 //render_model_triangles_with_random_colors(ren, mesh);
-                render_model_triangles_with_light(ren, mesh,glm::vec3(0,0,-1));
+                //render_model_triangles_with_light(ren, mesh,glm::vec3(0,0,-1));
+                render_model_triangles_with_deeph_and_light(ren, mesh,glm::vec3(0,0,-1));
 
                 break;
             }
