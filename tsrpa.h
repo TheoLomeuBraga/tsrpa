@@ -47,6 +47,17 @@ namespace TSRPA
         return Color256(to_uchar_value(r), to_uchar_value(g), to_uchar_value(b), to_uchar_value(a));
     }
 
+    class Mesh
+    {
+    public:
+        unsigned int vert_count;
+        std::vector<float> vertex;
+        std::vector<float> uv;
+        std::vector<float> normal;
+        std::vector<float> color;
+        Mesh() {}
+    };
+
     class FrameBuffer
     {
     public:
@@ -114,7 +125,7 @@ namespace TSRPA
             frame_buffer->clear();
         }
 
-        void draw_point(unsigned int x, unsigned int y, const Color256 &color)
+        void draw_point(const unsigned int &x, const unsigned int &y, const Color256 &color)
         {
 
             const unsigned int i = (y * width + x) * 4;
@@ -167,13 +178,40 @@ namespace TSRPA
             }
         }
 
-        void draw_triangle_wire_frame(const glm::ivec2 &a, const glm::ivec2 &b,const glm::ivec2 &c, const Color256 &color)
+        void draw_triangle_wire_frame(const glm::ivec2 &a, const glm::ivec2 &b, const glm::ivec2 &c, const Color256 &color)
         {
-            draw_line(a,b,color);
-            draw_line(b,c,color);
-            draw_line(c,a,color);
+            draw_line(a, b, color);
+            draw_line(b, c, color);
+            draw_line(c, a, color);
         }
 
+        void draw_basic_triangle(glm::ivec2 a, glm::ivec2 b, glm::ivec2 c, const Color256 &color)
+        {
+            if (a.y == b.y && a.y == c.y)
+                return;
+            if (a.y > b.y)
+                std::swap(a, b);
+            if (a.y > c.y)
+                std::swap(a, c);
+            if (b.y > c.y)
+                std::swap(b, c);
+            int total_height = c.y - a.y;
+            for (int i = 0; i < total_height; i++)
+            {
+                bool second_half = i > b.y - a.y || b.y == a.y;
+                int segment_height = second_half ? c.y - b.y : b.y - a.y;
+                float alpha = (float)i / total_height;
+                float beta = (float)(i - (second_half ? b.y - a.y : 0)) / segment_height;
+                glm::ivec2 A(a.x + (c.x - a.x) * alpha, a.y + (c.y - a.y) * alpha);
+                glm::ivec2 B = second_half ? glm::ivec2(b.x + (c.x - b.x) * beta, b.y + (c.y - b.y) * beta) : glm::ivec2(a.x + (b.x - a.x) * beta, a.y + (b.y - a.y) * beta);
+                if (A.x > B.x)
+                    std::swap(A, B);
+                for (int j = A.x; j <= B.x; j++)
+                {
+                    draw_point(j, a.y + i, color);
+                }
+            }
+        }
     };
 
 };

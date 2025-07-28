@@ -11,37 +11,10 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
-class Mesh
+class ObjMesh : public TSRPA::Mesh
 {
 public:
-    unsigned int vert_count;
-    std::vector<float> vertex;
-    std::vector<float> uv;
-    std::vector<float> normal;
-    std::vector<float> color;
-    Mesh() {}
-    Mesh(std::vector<float> vertex)
-    {
-        this->vertex = vertex;
-    }
-    Mesh(std::vector<float> vertex, std::vector<float> uv)
-    {
-        this->vertex = vertex;
-        this->uv = uv;
-    }
-    Mesh(std::vector<unsigned int> index, std::vector<float> vertex, std::vector<float> uv, std::vector<float> normal)
-    {
-        this->vertex = vertex;
-        this->uv = uv;
-        this->normal = normal;
-        this->color = normal;
-    }
-};
-
-class ObjMesh : public Mesh
-{
-public:
-    ObjMesh(const char *path) : Mesh()
+    ObjMesh(const char *path) : TSRPA::Mesh()
     {
         printf("loading: %s\n", path);
 
@@ -111,7 +84,7 @@ public:
     }
 };
 
-void render_model_with_points(TSRPA::Render &ren, const Mesh &mesh, const TSRPA::Color256 &color)
+void render_model_with_points(TSRPA::Render &ren, const TSRPA::Mesh &mesh, const TSRPA::Color256 &color)
 {
     for (unsigned int i = 0; i < mesh.vert_count; i++)
     {
@@ -122,7 +95,7 @@ void render_model_with_points(TSRPA::Render &ren, const Mesh &mesh, const TSRPA:
     }
 }
 
-void render_model_with_lines(TSRPA::Render &ren, const Mesh &mesh, const TSRPA::Color256 &color)
+void render_model_with_lines(TSRPA::Render &ren, const TSRPA::Mesh &mesh, const TSRPA::Color256 &color)
 {
 
     for (unsigned int i = 0; i < mesh.vert_count; i+=3)
@@ -139,6 +112,69 @@ void render_model_with_lines(TSRPA::Render &ren, const Mesh &mesh, const TSRPA::
 
         
         ren.draw_triangle_wire_frame(a,b,c,color);
+        
+    }
+}
+
+void render_model_with_basic_triangles(TSRPA::Render &ren, const TSRPA::Mesh &mesh, const TSRPA::Color256 &color)
+{
+
+    for (unsigned int i = 0; i < mesh.vert_count; i+=3)
+    {
+
+        glm::vec2 va(mesh.vertex[(i * 3) + 0],mesh.vertex[(i * 3) + 1]);
+        glm::ivec2 a((va.x + 1.0) * ren.width / 2.0, ren.height - (va.y + 1.0) * ren.height / 2.0);
+
+        glm::vec2 vb(mesh.vertex[(i * 3) + 3],mesh.vertex[(i * 3) + 4]);
+        glm::ivec2 b((vb.x + 1.0) * ren.width / 2.0, ren.height - (vb.y + 1.0) * ren.height / 2.0);
+
+        glm::vec2 vc(mesh.vertex[(i * 3) + 6],mesh.vertex[(i * 3) + 7]);
+        glm::ivec2 c((vc.x + 1.0) * ren.width / 2.0, ren.height - (vc.y + 1.0) * ren.height / 2.0);
+
+        ren.draw_basic_triangle(a,b,c,color);
+        
+    }
+}
+
+void render_model_triangles_with_random_colors(TSRPA::Render &ren, const TSRPA::Mesh &mesh)
+{
+
+    for (unsigned int i = 0; i < mesh.vert_count; i+=3)
+    {
+
+        glm::vec2 va(mesh.vertex[(i * 3) + 0],mesh.vertex[(i * 3) + 1]);
+        glm::ivec2 a((va.x + 1.0) * ren.width / 2.0, ren.height - (va.y + 1.0) * ren.height / 2.0);
+
+        glm::vec2 vb(mesh.vertex[(i * 3) + 3],mesh.vertex[(i * 3) + 4]);
+        glm::ivec2 b((vb.x + 1.0) * ren.width / 2.0, ren.height - (vb.y + 1.0) * ren.height / 2.0);
+
+        glm::vec2 vc(mesh.vertex[(i * 3) + 6],mesh.vertex[(i * 3) + 7]);
+        glm::ivec2 c((vc.x + 1.0) * ren.width / 2.0, ren.height - (vc.y + 1.0) * ren.height / 2.0);
+
+        ren.draw_basic_triangle(a,b,c,TSRPA::Color256(SDL_rand(255),SDL_rand(255),SDL_rand(255),255));
+        
+    }
+}
+
+void render_model_triangles_with_light(TSRPA::Render &ren, const TSRPA::Mesh &mesh,const glm::vec3 &light_rit)
+{
+
+    for (unsigned int i = 0; i < mesh.vert_count; i+=3)
+    {
+
+        glm::vec3 va(mesh.vertex[(i * 3) + 0],mesh.vertex[(i * 3) + 1],mesh.vertex[(i * 3) + 2]);
+        glm::ivec2 a((va.x + 1.0) * ren.width / 2.0, ren.height - (va.y + 1.0) * ren.height / 2.0);
+
+        glm::vec3 vb(mesh.vertex[(i * 3) + 3],mesh.vertex[(i * 3) + 4],mesh.vertex[(i * 3) + 5]);
+        glm::ivec2 b((vb.x + 1.0) * ren.width / 2.0, ren.height - (vb.y + 1.0) * ren.height / 2.0);
+
+        glm::vec3 vc(mesh.vertex[(i * 3) + 6],mesh.vertex[(i * 3) + 7],mesh.vertex[(i * 3) + 8]);
+        glm::ivec2 c((vc.x + 1.0) * ren.width / 2.0, ren.height - (vc.y + 1.0) * ren.height / 2.0);
+
+        glm::vec3 n = glm::normalize(glm::cross(vc-va,vb-va));
+        float intensity = glm::dot(n,light_rit);
+        if(intensity < 0.0){continue;}
+        ren.draw_basic_triangle(a,b,c, TSRPA::Color256(intensity*255, intensity*255, intensity*255, 255));
         
     }
 }
@@ -218,8 +254,12 @@ int main(int argc, char *argv[])
 
                 ObjMesh mesh(event.drop.data);
 
-                render_model_with_lines(ren, mesh, TSRPA::Palette::GREEN);
+                
+                //render_model_with_basic_triangles(ren, mesh, TSRPA::Palette::WHITE);
+                //render_model_with_lines(ren, mesh, TSRPA::Palette::GREEN);
                 //render_model_with_points(ren, mesh, TSRPA::Palette::RED);
+                //render_model_triangles_with_random_colors(ren, mesh);
+                render_model_triangles_with_light(ren, mesh,glm::vec3(0,0,-1));
 
                 break;
             }
