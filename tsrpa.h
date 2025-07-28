@@ -64,7 +64,8 @@ namespace TSRPA
             this->data = new unsigned char[width * height * 4];
         }
 
-        void clear(){
+        void clear()
+        {
             for (unsigned int i = 0; i < width * height * 4; i += 4)
             {
                 data[i] = clear_color.r;
@@ -115,9 +116,10 @@ namespace TSRPA
 
         void draw_point(unsigned int x, unsigned int y, const Color256 &color)
         {
-            
+
             const unsigned int i = (y * width + x) * 4;
-            if (i + 3 >= data_size -1){
+            if (i + 3 >= data_size - 1)
+            {
                 return;
             }
             frame_buffer->data[i] = color.r;
@@ -126,20 +128,20 @@ namespace TSRPA
             frame_buffer->data[i + 3] = color.a;
         }
 
-        bool draw_line(glm::vec2 a,  glm::vec2 b, const Color256 &color)
+        void draw_line(glm::ivec2 a, glm::ivec2 b, const Color256 &color)
         {
 
             bool steep = false;
-            if (std::abs(a.x - b[0]) < std::abs(a.y - b[1]))
+            if (std::abs(a.x - b.x) < std::abs(a.y - b.y))
             {
                 std::swap(a.x, a.y);
                 std::swap(b.x, b.y);
                 steep = true;
             }
-            if (a[0] > b[0])
+            if (a.x > b.x)
             {
-                std::swap(a[0], b[0]);
-                std::swap(a[1], b[1]);
+                std::swap(a.x, b.x);
+                std::swap(a.y, b.y);
             }
             int dx = b.x - a.x;
             int dy = b.y - a.y;
@@ -159,11 +161,10 @@ namespace TSRPA
                 error2 += derror2;
                 if (error2 > dx)
                 {
-                    y += (y1 > y0 ? 1 : -1);
+                    y += (b.y > a.y ? 1 : -1);
                     error2 -= dx * 2;
                 }
             }
-            return true;
         }
     };
 

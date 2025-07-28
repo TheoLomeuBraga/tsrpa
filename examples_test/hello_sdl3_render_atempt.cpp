@@ -125,18 +125,22 @@ void render_model_with_points(TSRPA::Render &ren, const Mesh &mesh, const TSRPA:
 void render_model_with_lines(TSRPA::Render &ren, const Mesh &mesh, const TSRPA::Color256 &color)
 {
 
-    for (unsigned int i = 0; i < mesh.vert_count-1; i+=2)
+    for (unsigned int i = 0; i < mesh.vert_count; i+=3)
     {
 
         glm::vec2 va(mesh.vertex[(i * 3) + 0],mesh.vertex[(i * 3) + 1]);
-        glm::vec2 a((va.x + 1.0) * ren.width / 2.0, ren.height - (va.y + 1.0) * ren.height / 2.0);
+        glm::ivec2 a((va.x + 1.0) * ren.width / 2.0, ren.height - (va.y + 1.0) * ren.height / 2.0);
 
         glm::vec2 vb(mesh.vertex[(i * 3) + 3],mesh.vertex[(i * 3) + 4]);
-        glm::vec2 b((vb.x + 1.0) * ren.width / 2.0, ren.height - (vb.y + 1.0) * ren.height / 2.0);
+        glm::ivec2 b((vb.x + 1.0) * ren.width / 2.0, ren.height - (vb.y + 1.0) * ren.height / 2.0);
 
-        //ren.draw_line(a,b,color);
-        ren.draw_line(a,a,color);
-        ren.draw_line(b,b,color);
+        glm::vec2 vc(mesh.vertex[(i * 3) + 6],mesh.vertex[(i * 3) + 7]);
+        glm::ivec2 c((vc.x + 1.0) * ren.width / 2.0, ren.height - (vc.y + 1.0) * ren.height / 2.0);
+
+        ren.draw_line(a,b,color);
+        ren.draw_line(b,c,color);
+        ren.draw_line(c,a,color);
+        
     }
 }
 
@@ -152,8 +156,8 @@ int main(int argc, char *argv[])
     // Create an application window with the following settings:
     window = SDL_CreateWindow(
         "Hello SDL3 render atempt",                   // window title
-        640,                                          // width, in pixels
-        480,                                          // height, in pixels
+        1024,                                          // width, in pixels
+        1024,                                          // height, in pixels
         SDL_WINDOW_RESIZABLE | SDL_WINDOW_TRANSPARENT // flags - see below
     );
 
@@ -175,7 +179,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    TSRPA::Render ren(512/2, 512/2);
+    TSRPA::Render ren(1024, 1024);
     ren.frame_buffer->clear_color = TSRPA::Palette::INVISIBLE;
     ren.clear();
 
@@ -185,9 +189,9 @@ int main(int argc, char *argv[])
     ren.draw_point(255, 255, TSRPA::Palette::GREEN);
 
     // ren.draw_line(glm::vec2(32, 32), glm::vec2(128, 128), TSRPA::Palette::RED);
-    ren.draw_line(glm::vec2(0, 0), glm::vec2(0, 500), TSRPA::Palette::RED);
-    ren.draw_line(glm::vec2(0, 0), glm::vec2(500, 0), TSRPA::Palette::RED);
-    ren.draw_line(glm::vec2(0, 0), glm::vec2(500, 500), TSRPA::Palette::RED);
+    ren.draw_line(glm::ivec2(0, 0), glm::vec2(0, 500), TSRPA::Palette::RED);
+    ren.draw_line(glm::ivec2(0, 0), glm::vec2(500, 0), TSRPA::Palette::RED);
+    ren.draw_line(glm::ivec2(0, 0), glm::vec2(500, 500), TSRPA::Palette::RED);
 
     const unsigned int pich = ren.width * 4;
 
