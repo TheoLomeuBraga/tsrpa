@@ -137,9 +137,8 @@ void render_model_with_lines(TSRPA::Render &ren, const Mesh &mesh, const TSRPA::
         glm::vec2 vc(mesh.vertex[(i * 3) + 6],mesh.vertex[(i * 3) + 7]);
         glm::ivec2 c((vc.x + 1.0) * ren.width / 2.0, ren.height - (vc.y + 1.0) * ren.height / 2.0);
 
-        ren.draw_line(a,b,color);
-        ren.draw_line(b,c,color);
-        ren.draw_line(c,a,color);
+        
+        ren.draw_triangle_wire_frame(a,b,c,color);
         
     }
 }

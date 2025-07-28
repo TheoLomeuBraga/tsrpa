@@ -166,6 +166,14 @@ namespace TSRPA
                 }
             }
         }
+
+        void draw_triangle_wire_frame(const glm::ivec2 &a, const glm::ivec2 &b,const glm::ivec2 &c, const Color256 &color)
+        {
+            draw_line(a,b,color);
+            draw_line(b,c,color);
+            draw_line(c,a,color);
+        }
+
     };
 
 };
