@@ -134,9 +134,9 @@ void render_model_with_lines(TSRPA::Render &ren, const Mesh &mesh, const TSRPA::
         glm::vec2 vb(mesh.vertex[(i * 3) + 3],mesh.vertex[(i * 3) + 4]);
         glm::vec2 b((vb.x + 1.0) * ren.width / 2.0, ren.height - (vb.y + 1.0) * ren.height / 2.0);
 
-        ren.draw_line(a,b,color);
-        //ren.draw_point(a.x,a.y,color);
-        //ren.draw_point(b.x,b.y,color);
+        //ren.draw_line(a,b,color);
+        ren.draw_line(a,a,color);
+        ren.draw_line(b,b,color);
     }
 }
 
