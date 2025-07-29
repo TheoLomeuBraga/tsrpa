@@ -422,8 +422,6 @@ namespace TSRPA
                         continue;
                     }
 
-                    //printf("bc_screen %f %f %f\n",bc_screen.x, bc_screen.y,bc_screen.z);
-
                     P.z = 0;
                     for (int i = 0; i < 3; i++)
                     {
@@ -436,7 +434,11 @@ namespace TSRPA
                         {
                             uv_cord += uv[i] * bc_screen[i];
                         }
-                        draw_point(P.x, P.y, texture.get_color(uv_cord.x * texture.width, texture.height - (uv_cord.y * texture.height)));
+                        Color256 texture_color = texture.get_color(uv_cord.x * texture.width, texture.height - (uv_cord.y * texture.height));
+                        glm::vec4 glm_texture_color(texture_color.r/255.0,texture_color.g/255.0,texture_color.b/255.0,texture_color.a/255.0);
+                        glm::vec4 glm_alpha_color(color.r/255.0,color.g/255.0,color.b/255.0,color.a/255.0);
+                        glm::vec4 glm_final_color = glm_alpha_color * glm_texture_color;
+                        draw_point(P.x, P.y, create_color(glm_final_color.r,glm_final_color.g,glm_final_color.b,glm_final_color.a) );
                     }
                 }
             }
