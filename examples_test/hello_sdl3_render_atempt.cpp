@@ -124,14 +124,19 @@ public:
     }
 };
 
+ObjMesh *last_mesh;
+
 void render_texture(TSRPA::Render &ren, TSRPA::Texture &texture)
 {
-    if(texture.width == 0 || texture.height == 0){return;}
+    if (texture.width == 0 || texture.height == 0)
+    {
+        return;
+    }
     for (unsigned int x = 0; x < texture.width; x++)
     {
         for (unsigned int y = 0; y < texture.height; y++)
         {
-            ren.draw_point(x,y,texture.get_color(x,y));
+            ren.draw_point(x, y, texture.get_color(x, y));
         }
     }
 }
@@ -260,7 +265,7 @@ void render_model_triangles_with_deeph_and_light(TSRPA::Render &ren, const TSRPA
     }
 }
 
-void render_model_triangles_with_deeph_and_texture(TSRPA::Render &ren, const TSRPA::Mesh &mesh, const glm::vec3 &light_rit)
+void render_model_triangles_with_deeph_and_texture(TSRPA::Render &ren, const TSRPA::Mesh &mesh, const glm::vec3 &light_rit, TSRPA::Texture &texture)
 {
 
     ren.zbuffer->set_deeph_mode(TSRPA::DeephMode::LESS);
@@ -286,7 +291,17 @@ void render_model_triangles_with_deeph_and_texture(TSRPA::Render &ren, const TSR
             continue;
         }
 
-        ren.draw_textured_triangle(points, TSRPA::Color256(intensity * 255, intensity * 255, intensity * 255, 255));
+        glm::vec2 uv[3];
+        glm::vec2 uva = glm::vec2(mesh.uv[(i * 2) + 0], mesh.uv[(i * 2) + 1]);
+        uv[0] = uva;
+
+        glm::vec2 uvb = glm::vec2(mesh.uv[(i * 2) + 2], mesh.uv[(i * 2) + 3]);
+        uv[1] = uvb;
+
+        glm::vec2 uvc = glm::vec2(mesh.uv[(i * 2) + 4], mesh.uv[(i * 2) + 5]);
+        uv[2] = uvc;
+
+        ren.draw_textured_triangle(points, uv, TSRPA::Color256(intensity * 255, intensity * 255, intensity * 255, 255), texture);
     }
 }
 
@@ -363,25 +378,46 @@ int main(int argc, char *argv[])
                 ren.frame_buffer->clear_color = TSRPA::Palette::BLACK;
                 ren.clear();
 
-                
-
                 // render_model_with_basic_triangles(ren, mesh, TSRPA::Palette::WHITE);
                 // render_model_with_lines(ren, mesh, TSRPA::Palette::GREEN);
                 // render_model_with_points(ren, mesh, TSRPA::Palette::RED);
                 // render_model_triangles_with_random_colors(ren, mesh);
                 // render_model_triangles_with_light(ren, mesh,glm::vec3(0,0,-1));
-                ObjMesh mesh(event.drop.data);
-                render_model_triangles_with_deeph_and_texture(ren, mesh, glm::vec3(0, 0, -1));
+                ObjMesh *new_mesh = new ObjMesh(event.drop.data);
+                if (new_mesh->is_valid())
+                {
+                    if (last_mesh)
+                    {
+                        delete last_mesh;
+                    }
+                    last_mesh = new_mesh;
+                    render_model_triangles_with_deeph_and_light(ren, *last_mesh, glm::vec3(0, 0, -1));
+                }
+                else
+                {
+                    delete new_mesh;
+                }
 
-                PngTexture texture(event.drop.data);
-                render_texture(ren, texture);
+                PngTexture texture = PngTexture(event.drop.data);
+                if (texture.is_valid())
+                {
+
+                    if (last_mesh && last_mesh->is_valid())
+                    {
+                        render_model_triangles_with_deeph_and_texture(ren, *last_mesh, glm::vec3(0, 0, -1), texture);
+                    }
+                    else
+                    {
+                        render_texture(ren, texture);
+                    }
+                }
 
                 break;
             }
         }
 
         // Do game logic, present a frame, etc.
-        //SDL_RenderClear(render);
+        // SDL_RenderClear(render);
         SDL_UpdateTexture(texture, NULL, (void *)ren.get_result(), pich);
         SDL_RenderTexture(render, texture, NULL, NULL);
         SDL_RenderPresent(render);

@@ -50,7 +50,7 @@ namespace TSRPA
 
     Color256 create_color256(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
     {
-        return Color256(r,g,b,a);
+        return Color256(r, g, b, a);
     }
 
     class Texture
@@ -59,26 +59,31 @@ namespace TSRPA
         unsigned int width;
         unsigned int height;
         unsigned char *data = NULL;
-        Texture(){}
-        ~Texture(){
-            if(data){
-                delete [] data;
+        Texture() {}
+        ~Texture()
+        {
+            if (data)
+            {
+                delete[] data;
             }
         }
 
-        Color256 get_color(const unsigned int &x,const unsigned int &y){
-            unsigned int i = (y * width + x) * 4;
-            return create_color256(data[i],data[i+1],data[i+2],data[i+3]);
+        bool is_valid() { return width > 0 && height > 0; }
+
+        Color256 get_color(const unsigned int &x, const unsigned int &y)
+        {
+            unsigned int i = ((y % height) * width + (x % width)) * 4;
+            return create_color256(data[i], data[i + 1], data[i + 2], data[i + 3]);
         }
 
-        void set_color(const unsigned int &x,const unsigned int &y,const Color256 &color){
+        void set_color(const unsigned int &x, const unsigned int &y, const Color256 &color)
+        {
             unsigned int i = (y * width + x) * 4;
-            data[i]=color.r;
-            data[i+1]=color.g;
-            data[i+2]=color.b;
-            data[i+3]=color.a;
+            data[i] = color.r;
+            data[i + 1] = color.g;
+            data[i + 2] = color.b;
+            data[i + 3] = color.a;
         }
-
     };
 
     class Mesh
@@ -90,6 +95,7 @@ namespace TSRPA
         std::vector<float> normal;
         std::vector<float> color;
         Mesh() {}
+        bool is_valid() { return vert_count > 0; }
     };
 
     class FrameBuffer
@@ -374,10 +380,16 @@ namespace TSRPA
                 {
                     glm::vec3 bc_screen = barycentric(points, P);
                     if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
+                    {
                         continue;
+                    }
+
                     P.z = 0;
                     for (int i = 0; i < 3; i++)
+                    {
                         P.z += points[i][2] * bc_screen[i];
+                    }
+
                     if (zbuffer->calculate_deep_check(int(P.x + P.y * width), P.z))
                     {
                         draw_point(P.x, P.y, color);
@@ -386,7 +398,7 @@ namespace TSRPA
             }
         }
 
-        void draw_textured_triangle(const glm::vec3 *points, const Color256 &color)
+        void draw_textured_triangle(const glm::vec3 *points, const glm::vec2 *uv, const Color256 &color, TSRPA::Texture &texture)
         {
             glm::ivec2 bboxmin(width - 1, height - 1);
             glm::ivec2 bboxmax(0, 0);
@@ -406,13 +418,25 @@ namespace TSRPA
                 {
                     glm::vec3 bc_screen = barycentric(points, P);
                     if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
+                    {
                         continue;
+                    }
+
+                    //printf("bc_screen %f %f %f\n",bc_screen.x, bc_screen.y,bc_screen.z);
+
                     P.z = 0;
                     for (int i = 0; i < 3; i++)
+                    {
                         P.z += points[i][2] * bc_screen[i];
+                    }
                     if (zbuffer->calculate_deep_check(int(P.x + P.y * width), P.z))
                     {
-                        draw_point(P.x, P.y, color);
+                        glm::vec2 uv_cord(0.0,0.0);
+                        for (int i = 0; i < 3; i++)
+                        {
+                            uv_cord += uv[i] * bc_screen[i];
+                        }
+                        draw_point(P.x, P.y, texture.get_color(uv_cord.x * texture.width, texture.height - (uv_cord.y * texture.height)));
                     }
                 }
             }
