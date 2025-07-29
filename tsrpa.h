@@ -48,6 +48,39 @@ namespace TSRPA
         return Color256(to_uchar_value(r), to_uchar_value(g), to_uchar_value(b), to_uchar_value(a));
     }
 
+    Color256 create_color256(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
+    {
+        return Color256(r,g,b,a);
+    }
+
+    class Texture
+    {
+    public:
+        unsigned int width;
+        unsigned int height;
+        unsigned char *data = NULL;
+        Texture(){}
+        ~Texture(){
+            if(data){
+                delete [] data;
+            }
+        }
+
+        Color256 get_color(const unsigned int &x,const unsigned int &y){
+            unsigned int i = (y * width + x) * 4;
+            return create_color256(data[i],data[i+1],data[i+2],data[i+3]);
+        }
+
+        void set_color(const unsigned int &x,const unsigned int &y,const Color256 &color){
+            unsigned int i = (y * width + x) * 4;
+            data[i]=color.r;
+            data[i+1]=color.g;
+            data[i+2]=color.b;
+            data[i+3]=color.a;
+        }
+
+    };
+
     class Mesh
     {
     public:
@@ -221,19 +254,20 @@ namespace TSRPA
             zbuffer->clear();
         }
 
-        void draw_point(const unsigned int &x, const unsigned int &y, const Color256 &color)
+        bool draw_point(const unsigned int &x, const unsigned int &y, const Color256 &color)
         {
 
             const unsigned int i = (y * width + x) * 4;
             if (i + 3 >= data_size - 1)
             {
-                return;
+                return false;
             }
 
             frame_buffer->data[i] = color.r;
             frame_buffer->data[i + 1] = color.g;
             frame_buffer->data[i + 2] = color.b;
             frame_buffer->data[i + 3] = color.a;
+            return true;
         }
 
         void draw_line(glm::ivec2 a, glm::ivec2 b, const Color256 &color)
@@ -320,7 +354,7 @@ namespace TSRPA
             return glm::vec3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
         }
 
-        void draw_triangle(const glm::vec3 *points, const Color256 &color)
+        void draw_colorfull_triangle(const glm::vec3 *points, const Color256 &color)
         {
             glm::ivec2 bboxmin(width - 1, height - 1);
             glm::ivec2 bboxmax(0, 0);
@@ -344,7 +378,39 @@ namespace TSRPA
                     P.z = 0;
                     for (int i = 0; i < 3; i++)
                         P.z += points[i][2] * bc_screen[i];
-                    if (zbuffer->calculate_deep_check(int(P.x + P.y * width),P.z))
+                    if (zbuffer->calculate_deep_check(int(P.x + P.y * width), P.z))
+                    {
+                        draw_point(P.x, P.y, color);
+                    }
+                }
+            }
+        }
+
+        void draw_textured_triangle(const glm::vec3 *points, const Color256 &color)
+        {
+            glm::ivec2 bboxmin(width - 1, height - 1);
+            glm::ivec2 bboxmax(0, 0);
+            glm::ivec2 clamp(width - 1, height - 1);
+            for (int i = 0; i < 3; i++)
+            {
+                bboxmin.x = std::max(0, (int)std::min(bboxmin.x, (int)points[i].x));
+                bboxmin.y = std::max(0, (int)std::min(bboxmin.y, (int)points[i].y));
+
+                bboxmax.x = std::min(clamp.x, std::max(bboxmax.x, (int)points[i].x));
+                bboxmax.y = std::min(clamp.y, std::max(bboxmax.y, (int)points[i].y));
+            }
+            glm::vec3 P;
+            for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++)
+            {
+                for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
+                {
+                    glm::vec3 bc_screen = barycentric(points, P);
+                    if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
+                        continue;
+                    P.z = 0;
+                    for (int i = 0; i < 3; i++)
+                        P.z += points[i][2] * bc_screen[i];
+                    if (zbuffer->calculate_deep_check(int(P.x + P.y * width), P.z))
                     {
                         draw_point(P.x, P.y, color);
                     }

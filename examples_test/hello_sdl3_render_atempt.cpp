@@ -2,7 +2,7 @@
 #include <cmath>
 #include <vector>
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
+#include <SDL3_image/SDL_image.h>
 #include <glm/glm.hpp>
 
 #define TSRPA_ADD_BASIC_COLOR_PALETTE
@@ -84,6 +84,58 @@ public:
     }
 };
 
+class PngTexture : public TSRPA::Texture
+{
+public:
+    PngTexture(const char *path) : TSRPA::Texture()
+    {
+        // printf("loading: %s\n", path);
+        SDL_Surface *image_data = IMG_Load(path);
+
+        if (!image_data)
+        {
+            SDL_Log("Fail to load image: %s", SDL_GetError());
+            return;
+        }
+
+        SDL_Surface *new_image_data = SDL_ConvertSurface(image_data, SDL_PIXELFORMAT_RGBA32);
+
+        if (!new_image_data)
+        {
+            SDL_Log("Fail to convert surface: %s", SDL_GetError());
+            SDL_DestroySurface(image_data);
+            return;
+        }
+
+        width = new_image_data->w;
+        height = new_image_data->h;
+        data = new unsigned char[width * height * 4];
+
+        Uint32 *pixels = (Uint32 *)new_image_data->pixels;
+        for (unsigned int i = 0; i < new_image_data->w * new_image_data->h; i++)
+        {
+            unsigned int data_idx = i * 4;
+            SDL_GetRGBA(pixels[i], SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA32), NULL, &data[data_idx + 0], &data[data_idx + 1], &data[data_idx + 2], &data[data_idx + 3]);
+        }
+
+        SDL_DestroySurface(new_image_data);
+
+        SDL_DestroySurface(image_data);
+    }
+};
+
+void render_texture(TSRPA::Render &ren, TSRPA::Texture &texture)
+{
+    if(texture.width == 0 || texture.height == 0){return;}
+    for (unsigned int x = 0; x < texture.width; x++)
+    {
+        for (unsigned int y = 0; y < texture.height; y++)
+        {
+            ren.draw_point(x,y,texture.get_color(x,y));
+        }
+    }
+}
+
 void render_model_with_points(TSRPA::Render &ren, const TSRPA::Mesh &mesh, const TSRPA::Color256 &color)
 {
     for (unsigned int i = 0; i < mesh.vert_count; i++)
@@ -98,113 +150,143 @@ void render_model_with_points(TSRPA::Render &ren, const TSRPA::Mesh &mesh, const
 void render_model_with_lines(TSRPA::Render &ren, const TSRPA::Mesh &mesh, const TSRPA::Color256 &color)
 {
 
-    for (unsigned int i = 0; i < mesh.vert_count; i+=3)
+    for (unsigned int i = 0; i < mesh.vert_count; i += 3)
     {
 
-        glm::vec2 va(mesh.vertex[(i * 3) + 0],mesh.vertex[(i * 3) + 1]);
+        glm::vec2 va(mesh.vertex[(i * 3) + 0], mesh.vertex[(i * 3) + 1]);
         glm::ivec2 a((va.x + 1.0) * ren.width / 2.0, ren.height - (va.y + 1.0) * ren.height / 2.0);
 
-        glm::vec2 vb(mesh.vertex[(i * 3) + 3],mesh.vertex[(i * 3) + 4]);
+        glm::vec2 vb(mesh.vertex[(i * 3) + 3], mesh.vertex[(i * 3) + 4]);
         glm::ivec2 b((vb.x + 1.0) * ren.width / 2.0, ren.height - (vb.y + 1.0) * ren.height / 2.0);
 
-        glm::vec2 vc(mesh.vertex[(i * 3) + 6],mesh.vertex[(i * 3) + 7]);
+        glm::vec2 vc(mesh.vertex[(i * 3) + 6], mesh.vertex[(i * 3) + 7]);
         glm::ivec2 c((vc.x + 1.0) * ren.width / 2.0, ren.height - (vc.y + 1.0) * ren.height / 2.0);
 
-        
-        ren.draw_triangle_wire_frame(a,b,c,color);
-        
+        ren.draw_triangle_wire_frame(a, b, c, color);
     }
 }
 
 void render_model_with_basic_triangles(TSRPA::Render &ren, const TSRPA::Mesh &mesh, const TSRPA::Color256 &color)
 {
 
-    for (unsigned int i = 0; i < mesh.vert_count; i+=3)
+    for (unsigned int i = 0; i < mesh.vert_count; i += 3)
     {
 
-        glm::vec2 va(mesh.vertex[(i * 3) + 0],mesh.vertex[(i * 3) + 1]);
+        glm::vec2 va(mesh.vertex[(i * 3) + 0], mesh.vertex[(i * 3) + 1]);
         glm::ivec2 a((va.x + 1.0) * ren.width / 2.0, ren.height - (va.y + 1.0) * ren.height / 2.0);
 
-        glm::vec2 vb(mesh.vertex[(i * 3) + 3],mesh.vertex[(i * 3) + 4]);
+        glm::vec2 vb(mesh.vertex[(i * 3) + 3], mesh.vertex[(i * 3) + 4]);
         glm::ivec2 b((vb.x + 1.0) * ren.width / 2.0, ren.height - (vb.y + 1.0) * ren.height / 2.0);
 
-        glm::vec2 vc(mesh.vertex[(i * 3) + 6],mesh.vertex[(i * 3) + 7]);
+        glm::vec2 vc(mesh.vertex[(i * 3) + 6], mesh.vertex[(i * 3) + 7]);
         glm::ivec2 c((vc.x + 1.0) * ren.width / 2.0, ren.height - (vc.y + 1.0) * ren.height / 2.0);
 
-        ren.draw_basic_triangle(a,b,c,color);
-        
+        ren.draw_basic_triangle(a, b, c, color);
     }
 }
 
 void render_model_triangles_with_random_colors(TSRPA::Render &ren, const TSRPA::Mesh &mesh)
 {
 
-    for (unsigned int i = 0; i < mesh.vert_count; i+=3)
+    for (unsigned int i = 0; i < mesh.vert_count; i += 3)
     {
 
-        glm::vec2 va(mesh.vertex[(i * 3) + 0],mesh.vertex[(i * 3) + 1]);
+        glm::vec2 va(mesh.vertex[(i * 3) + 0], mesh.vertex[(i * 3) + 1]);
         glm::ivec2 a((va.x + 1.0) * ren.width / 2.0, ren.height - (va.y + 1.0) * ren.height / 2.0);
 
-        glm::vec2 vb(mesh.vertex[(i * 3) + 3],mesh.vertex[(i * 3) + 4]);
+        glm::vec2 vb(mesh.vertex[(i * 3) + 3], mesh.vertex[(i * 3) + 4]);
         glm::ivec2 b((vb.x + 1.0) * ren.width / 2.0, ren.height - (vb.y + 1.0) * ren.height / 2.0);
 
-        glm::vec2 vc(mesh.vertex[(i * 3) + 6],mesh.vertex[(i * 3) + 7]);
+        glm::vec2 vc(mesh.vertex[(i * 3) + 6], mesh.vertex[(i * 3) + 7]);
         glm::ivec2 c((vc.x + 1.0) * ren.width / 2.0, ren.height - (vc.y + 1.0) * ren.height / 2.0);
 
-        ren.draw_basic_triangle(a,b,c,TSRPA::Color256(SDL_rand(255),SDL_rand(255),SDL_rand(255),255));
-        
+        ren.draw_basic_triangle(a, b, c, TSRPA::Color256(SDL_rand(255), SDL_rand(255), SDL_rand(255), 255));
     }
 }
 
-void render_model_triangles_with_light(TSRPA::Render &ren, const TSRPA::Mesh &mesh,const glm::vec3 &light_rit)
+void render_model_triangles_with_light(TSRPA::Render &ren, const TSRPA::Mesh &mesh, const glm::vec3 &light_rit)
 {
 
-    for (unsigned int i = 0; i < mesh.vert_count; i+=3)
+    for (unsigned int i = 0; i < mesh.vert_count; i += 3)
     {
 
-        glm::vec3 va(mesh.vertex[(i * 3) + 0],mesh.vertex[(i * 3) + 1],mesh.vertex[(i * 3) + 2]);
+        glm::vec3 va(mesh.vertex[(i * 3) + 0], mesh.vertex[(i * 3) + 1], mesh.vertex[(i * 3) + 2]);
         glm::ivec2 a((va.x + 1.0) * ren.width / 2.0, ren.height - (va.y + 1.0) * ren.height / 2.0);
 
-        glm::vec3 vb(mesh.vertex[(i * 3) + 3],mesh.vertex[(i * 3) + 4],mesh.vertex[(i * 3) + 5]);
+        glm::vec3 vb(mesh.vertex[(i * 3) + 3], mesh.vertex[(i * 3) + 4], mesh.vertex[(i * 3) + 5]);
         glm::ivec2 b((vb.x + 1.0) * ren.width / 2.0, ren.height - (vb.y + 1.0) * ren.height / 2.0);
 
-        glm::vec3 vc(mesh.vertex[(i * 3) + 6],mesh.vertex[(i * 3) + 7],mesh.vertex[(i * 3) + 8]);
+        glm::vec3 vc(mesh.vertex[(i * 3) + 6], mesh.vertex[(i * 3) + 7], mesh.vertex[(i * 3) + 8]);
         glm::ivec2 c((vc.x + 1.0) * ren.width / 2.0, ren.height - (vc.y + 1.0) * ren.height / 2.0);
 
-        glm::vec3 n = glm::normalize(glm::cross(vc-va,vb-va));
-        float intensity = glm::dot(n,light_rit);
-        if(intensity < 0.0){continue;}
-        
-        ren.draw_basic_triangle(a,b,c, TSRPA::Color256(intensity*255, intensity*255, intensity*255, 255));
-        
+        glm::vec3 n = glm::normalize(glm::cross(vc - va, vb - va));
+        float intensity = glm::dot(n, light_rit);
+        if (intensity < 0.0)
+        {
+            continue;
+        }
+
+        ren.draw_basic_triangle(a, b, c, TSRPA::Color256(intensity * 255, intensity * 255, intensity * 255, 255));
     }
 }
 
-void render_model_triangles_with_deeph_and_light(TSRPA::Render &ren, const TSRPA::Mesh &mesh,const glm::vec3 &light_rit)
+void render_model_triangles_with_deeph_and_light(TSRPA::Render &ren, const TSRPA::Mesh &mesh, const glm::vec3 &light_rit)
 {
 
     ren.zbuffer->set_deeph_mode(TSRPA::DeephMode::LESS);
 
-    for (unsigned int i = 0; i < mesh.vert_count; i+=3)
+    for (unsigned int i = 0; i < mesh.vert_count; i += 3)
     {
 
         glm::vec3 points[3];
 
-        glm::vec3 va(mesh.vertex[(i * 3) + 0],mesh.vertex[(i * 3) + 1],mesh.vertex[(i * 3) + 2]);
-        points[0] = glm::vec3((va.x + 1.0) * ren.width / 2.0, ren.height - (va.y + 1.0) * ren.height / 2.0,va.z);
+        glm::vec3 va(mesh.vertex[(i * 3) + 0], mesh.vertex[(i * 3) + 1], mesh.vertex[(i * 3) + 2]);
+        points[0] = glm::vec3((va.x + 1.0) * ren.width / 2.0, ren.height - (va.y + 1.0) * ren.height / 2.0, va.z);
 
-        glm::vec3 vb(mesh.vertex[(i * 3) + 3],mesh.vertex[(i * 3) + 4],mesh.vertex[(i * 3) + 5]);
-        points[1] = glm::vec3((vb.x + 1.0) * ren.width / 2.0, ren.height - (vb.y + 1.0) * ren.height / 2.0,vb.z);
+        glm::vec3 vb(mesh.vertex[(i * 3) + 3], mesh.vertex[(i * 3) + 4], mesh.vertex[(i * 3) + 5]);
+        points[1] = glm::vec3((vb.x + 1.0) * ren.width / 2.0, ren.height - (vb.y + 1.0) * ren.height / 2.0, vb.z);
 
-        glm::vec3 vc(mesh.vertex[(i * 3) + 6],mesh.vertex[(i * 3) + 7],mesh.vertex[(i * 3) + 8]);
-        points[2] = glm::vec3((vc.x + 1.0) * ren.width / 2.0, ren.height - (vc.y + 1.0) * ren.height / 2.0,vc.z);
+        glm::vec3 vc(mesh.vertex[(i * 3) + 6], mesh.vertex[(i * 3) + 7], mesh.vertex[(i * 3) + 8]);
+        points[2] = glm::vec3((vc.x + 1.0) * ren.width / 2.0, ren.height - (vc.y + 1.0) * ren.height / 2.0, vc.z);
 
-        glm::vec3 n = glm::normalize(glm::cross(vc-va,vb-va));
-        float intensity = glm::dot(n,light_rit);
-        if(intensity < 0.0){continue;}
-        
-        ren.draw_triangle(points, TSRPA::Color256(intensity*255, intensity*255, intensity*255, 255));
-        
+        glm::vec3 n = glm::normalize(glm::cross(vc - va, vb - va));
+        float intensity = glm::dot(n, light_rit);
+        if (intensity < 0.0)
+        {
+            continue;
+        }
+
+        ren.draw_colorfull_triangle(points, TSRPA::Color256(intensity * 255, intensity * 255, intensity * 255, 255));
+    }
+}
+
+void render_model_triangles_with_deeph_and_texture(TSRPA::Render &ren, const TSRPA::Mesh &mesh, const glm::vec3 &light_rit)
+{
+
+    ren.zbuffer->set_deeph_mode(TSRPA::DeephMode::LESS);
+
+    for (unsigned int i = 0; i < mesh.vert_count; i += 3)
+    {
+
+        glm::vec3 points[3];
+
+        glm::vec3 va(mesh.vertex[(i * 3) + 0], mesh.vertex[(i * 3) + 1], mesh.vertex[(i * 3) + 2]);
+        points[0] = glm::vec3((va.x + 1.0) * ren.width / 2.0, ren.height - (va.y + 1.0) * ren.height / 2.0, va.z);
+
+        glm::vec3 vb(mesh.vertex[(i * 3) + 3], mesh.vertex[(i * 3) + 4], mesh.vertex[(i * 3) + 5]);
+        points[1] = glm::vec3((vb.x + 1.0) * ren.width / 2.0, ren.height - (vb.y + 1.0) * ren.height / 2.0, vb.z);
+
+        glm::vec3 vc(mesh.vertex[(i * 3) + 6], mesh.vertex[(i * 3) + 7], mesh.vertex[(i * 3) + 8]);
+        points[2] = glm::vec3((vc.x + 1.0) * ren.width / 2.0, ren.height - (vc.y + 1.0) * ren.height / 2.0, vc.z);
+
+        glm::vec3 n = glm::normalize(glm::cross(vc - va, vb - va));
+        float intensity = glm::dot(n, light_rit);
+        if (intensity < 0.0)
+        {
+            continue;
+        }
+
+        ren.draw_textured_triangle(points, TSRPA::Color256(intensity * 255, intensity * 255, intensity * 255, 255));
     }
 }
 
@@ -220,8 +302,8 @@ int main(int argc, char *argv[])
     // Create an application window with the following settings:
     window = SDL_CreateWindow(
         "Hello SDL3 render atempt",                   // window title
-        1024,                                          // width, in pixels
-        1024,                                          // height, in pixels
+        1024,                                         // width, in pixels
+        1024,                                         // height, in pixels
         SDL_WINDOW_RESIZABLE | SDL_WINDOW_TRANSPARENT // flags - see below
     );
 
@@ -281,22 +363,25 @@ int main(int argc, char *argv[])
                 ren.frame_buffer->clear_color = TSRPA::Palette::BLACK;
                 ren.clear();
 
-                ObjMesh mesh(event.drop.data);
-
                 
-                //render_model_with_basic_triangles(ren, mesh, TSRPA::Palette::WHITE);
-                //render_model_with_lines(ren, mesh, TSRPA::Palette::GREEN);
-                //render_model_with_points(ren, mesh, TSRPA::Palette::RED);
-                //render_model_triangles_with_random_colors(ren, mesh);
-                //render_model_triangles_with_light(ren, mesh,glm::vec3(0,0,-1));
-                render_model_triangles_with_deeph_and_light(ren, mesh,glm::vec3(0,0,-1));
+
+                // render_model_with_basic_triangles(ren, mesh, TSRPA::Palette::WHITE);
+                // render_model_with_lines(ren, mesh, TSRPA::Palette::GREEN);
+                // render_model_with_points(ren, mesh, TSRPA::Palette::RED);
+                // render_model_triangles_with_random_colors(ren, mesh);
+                // render_model_triangles_with_light(ren, mesh,glm::vec3(0,0,-1));
+                ObjMesh mesh(event.drop.data);
+                render_model_triangles_with_deeph_and_texture(ren, mesh, glm::vec3(0, 0, -1));
+
+                PngTexture texture(event.drop.data);
+                render_texture(ren, texture);
 
                 break;
             }
         }
 
         // Do game logic, present a frame, etc.
-        // SDL_RenderClear(render);
+        //SDL_RenderClear(render);
         SDL_UpdateTexture(texture, NULL, (void *)ren.get_result(), pich);
         SDL_RenderTexture(render, texture, NULL, NULL);
         SDL_RenderPresent(render);
