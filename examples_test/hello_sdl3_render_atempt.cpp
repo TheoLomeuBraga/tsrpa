@@ -167,7 +167,7 @@ void render_model_triangles_with_deeph_and_light(TSRPA::Render &ren, const TSRPA
             continue;
         }
 
-        ren.draw_colorfull_triangle(points, TSRPA::Color256(intensity * 255, intensity * 255, intensity * 255, 255));
+        ren.draw_colorfull_triangle(points, glm::ivec4(intensity * 255, intensity * 255, intensity * 255, 255));
     }
 }
 
@@ -208,7 +208,7 @@ void render_model_triangles_with_deeph_and_texture(TSRPA::Render &ren, const TSR
         glm::vec2 uvc = glm::vec2(mesh.uv[(i * 2) + 4], mesh.uv[(i * 2) + 5]);
         uv[2] = uvc;
 
-        ren.draw_textured_triangle(points, uv, TSRPA::Color256(intensity * 255, intensity * 255, intensity * 255, 255), texture);
+        ren.draw_textured_triangle(points, uv, glm::ivec4(intensity * 255, intensity * 255, intensity * 255, 255), texture);
     }
 }
 

@@ -7,33 +7,16 @@
 namespace TSRPA
 {
 
-    class Color256
-    {
-    public:
-        unsigned char r = 0;
-        unsigned char g = 0;
-        unsigned char b = 0;
-        unsigned char a = 0;
-        Color256() {}
-        Color256(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
-        {
-            this->r = r;
-            this->g = g;
-            this->b = b;
-            this->a = a;
-        }
-    };
-
 #ifdef TSRPA_ADD_BASIC_COLOR_PALETTE
 
     namespace Palette
     {
-        const Color256 INVISIBLE(0, 0, 0, 0);
-        const Color256 BLACK(0, 0, 0, 255);
-        const Color256 WHITE(255, 255, 255, 255);
-        const Color256 RED(255, 0, 0, 255);
-        const Color256 GREEN(0, 255, 0, 255);
-        const Color256 BLUE(0, 0, 255, 255);
+        const glm::ivec4 INVISIBLE(0, 0, 0, 0);
+        const glm::ivec4 BLACK(0, 0, 0, 255);
+        const glm::ivec4 WHITE(255, 255, 255, 255);
+        const glm::ivec4 RED(255, 0, 0, 255);
+        const glm::ivec4 GREEN(0, 255, 0, 255);
+        const glm::ivec4 BLUE(0, 0, 255, 255);
     };
 
 #endif
@@ -43,14 +26,14 @@ namespace TSRPA
         return (unsigned char)std::round(value * 255.0);
     }
 
-    Color256 create_color(float r, float g, float b, float a)
+    glm::ivec4 create_color(float r, float g, float b, float a)
     {
-        return Color256(to_uchar_value(r), to_uchar_value(g), to_uchar_value(b), to_uchar_value(a));
+        return glm::ivec4(to_uchar_value(r), to_uchar_value(g), to_uchar_value(b), to_uchar_value(a));
     }
 
-    Color256 create_color256(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
+    glm::ivec4 create_color256(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
     {
-        return Color256(r, g, b, a);
+        return glm::ivec4(r, g, b, a);
     }
 
     class Texture
@@ -70,13 +53,13 @@ namespace TSRPA
 
         bool is_valid() { return width > 0 && height > 0; }
 
-        Color256 get_color(const unsigned int &x, const unsigned int &y)
+        glm::ivec4 get_color(const unsigned int &x, const unsigned int &y)
         {
             unsigned int i = ((y % height) * width + (x % width)) * 4;
             return create_color256(data[i], data[i + 1], data[i + 2], data[i + 3]);
         }
 
-        void set_color(const unsigned int &x, const unsigned int &y, const Color256 &color)
+        void set_color(const unsigned int &x, const unsigned int &y, const glm::ivec4 &color)
         {
             unsigned int i = (y * width + x) * 4;
             data[i] = color.r;
@@ -104,7 +87,7 @@ namespace TSRPA
         unsigned int width;
         unsigned int height;
         unsigned char *data;
-        Color256 clear_color;
+        glm::ivec4 clear_color;
 
         FrameBuffer() {}
 
@@ -260,7 +243,7 @@ namespace TSRPA
             zbuffer->clear();
         }
 
-        bool draw_point(const unsigned int &x, const unsigned int &y, const Color256 &color)
+        bool draw_point(const unsigned int &x, const unsigned int &y, const glm::ivec4 &color)
         {
 
             const unsigned int i = (y * width + x) * 4;
@@ -276,7 +259,7 @@ namespace TSRPA
             return true;
         }
 
-        void draw_line(glm::ivec2 a, glm::ivec2 b, const Color256 &color)
+        void draw_line(glm::ivec2 a, glm::ivec2 b, const glm::ivec4 &color)
         {
 
             bool steep = false;
@@ -315,14 +298,14 @@ namespace TSRPA
             }
         }
 
-        void draw_triangle_wire_frame(const glm::ivec2 &a, const glm::ivec2 &b, const glm::ivec2 &c, const Color256 &color)
+        void draw_triangle_wire_frame(const glm::ivec2 &a, const glm::ivec2 &b, const glm::ivec2 &c, const glm::ivec4 &color)
         {
             draw_line(a, b, color);
             draw_line(b, c, color);
             draw_line(c, a, color);
         }
 
-        void draw_basic_triangle(glm::ivec2 a, glm::ivec2 b, glm::ivec2 c, const Color256 &color)
+        void draw_basic_triangle(glm::ivec2 a, glm::ivec2 b, glm::ivec2 c, const glm::ivec4 &color)
         {
             if (a.y == b.y && a.y == c.y)
                 return;
@@ -360,7 +343,7 @@ namespace TSRPA
             return glm::vec3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
         }
 
-        void draw_colorfull_triangle(const glm::vec3 *points, const Color256 &color)
+        void draw_colorfull_triangle(const glm::vec3 *points, const glm::ivec4 &color)
         {
             glm::ivec2 bboxmin(width - 1, height - 1);
             glm::ivec2 bboxmax(0, 0);
@@ -398,7 +381,7 @@ namespace TSRPA
             }
         }
 
-        void draw_textured_triangle(const glm::vec3 *points, const glm::vec2 *uv, const Color256 &color, TSRPA::Texture &texture)
+        void draw_textured_triangle(const glm::vec3 *points, const glm::vec2 *uv, const glm::ivec4 &color, TSRPA::Texture &texture)
         {
             glm::ivec2 bboxmin(width - 1, height - 1);
             glm::ivec2 bboxmax(0, 0);
@@ -434,7 +417,7 @@ namespace TSRPA
                         {
                             uv_cord += uv[i] * bc_screen[i];
                         }
-                        Color256 texture_color = texture.get_color(uv_cord.x * texture.width, texture.height - (uv_cord.y * texture.height));
+                        glm::ivec4 texture_color = texture.get_color(uv_cord.x * texture.width, texture.height - (uv_cord.y * texture.height));
                         glm::vec4 glm_texture_color(texture_color.r/255.0,texture_color.g/255.0,texture_color.b/255.0,texture_color.a/255.0);
                         glm::vec4 glm_alpha_color(color.r/255.0,color.g/255.0,color.b/255.0,color.a/255.0);
                         glm::vec4 glm_final_color = glm_alpha_color * glm_texture_color;
