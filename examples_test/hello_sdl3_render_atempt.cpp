@@ -185,16 +185,16 @@ glm::mat4 model_transform_matrix;
 void render_model_triangles_with_deeph_and_texture(TSRPA::Renderer &ren, TSRPA::Mesh &mesh, TSRPA::Texture &texture)
 {
 
-    glm::mat4 mvp = ren.projection_matrix * ren.view_matrix * model_transform_matrix;
+    
 
     for (unsigned int i = 0; i < mesh.vert_count; i += 3)
     {
 
         glm::vec3 points[3];
 
-        points[0] = ren.calculate_screen_position(mesh.vertex[(i * 3) + 0], mesh.vertex[(i * 3) + 1], mesh.vertex[(i * 3) + 2], mvp);
-        points[1] = ren.calculate_screen_position(mesh.vertex[(i * 3) + 3], mesh.vertex[(i * 3) + 4], mesh.vertex[(i * 3) + 5], mvp);
-        points[2] = ren.calculate_screen_position(mesh.vertex[(i * 3) + 6], mesh.vertex[(i * 3) + 7], mesh.vertex[(i * 3) + 8], mvp);
+        points[0] = ren.calculate_screen_position(mesh.vertex[(i * 3) + 0], mesh.vertex[(i * 3) + 1], mesh.vertex[(i * 3) + 2], model_transform_matrix);
+        points[1] = ren.calculate_screen_position(mesh.vertex[(i * 3) + 3], mesh.vertex[(i * 3) + 4], mesh.vertex[(i * 3) + 5], model_transform_matrix);
+        points[2] = ren.calculate_screen_position(mesh.vertex[(i * 3) + 6], mesh.vertex[(i * 3) + 7], mesh.vertex[(i * 3) + 8], model_transform_matrix);
 
         glm::vec2 uv[3];
         glm::vec2 uva = glm::vec2(mesh.uv[(i * 2) + 0], mesh.uv[(i * 2) + 1]);

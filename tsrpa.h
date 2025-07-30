@@ -83,10 +83,20 @@ namespace TSRPA
         }
     };
 
+    struct VestexShaderData
+    {
+    };
+
+    struct FragmentShaderData
+    {
+    };
+
     class Material
     {
     public:
         Material() {}
+        std::function<void(VestexShaderData*)> vertex_shader;
+        std::function<void(FragmentShaderData*)> fragment_shader;
     };
 
     struct VertexIndex
@@ -346,8 +356,11 @@ namespace TSRPA
             }
         }
 
-        glm::vec3 calculate_screen_position(const float &x, const float &y, const float &z, const glm::mat4 &mvp)
+        glm::vec3 calculate_screen_position(const float &x, const float &y, const float &z, const glm::mat4 &model_transform_matrix)
         {
+
+            glm::mat4 mvp = projection_matrix * view_matrix * model_transform_matrix;
+
             glm::vec4 clip_space_pos = mvp * glm::vec4(x, y, z, 1.0);
 
             glm::vec3 space_pos;
@@ -447,7 +460,7 @@ namespace TSRPA
                         {
                             uv_cord += uv[i] * bc_screen[i];
                         }
-                        
+
                         glm::ivec4 texture_color = texture.get_sample(uv_cord);
                         glm::vec4 glm_texture_color(texture_color.r / 255.0, texture_color.g / 255.0, texture_color.b / 255.0, texture_color.a / 255.0);
                         glm::vec4 glm_alpha_color(color.r / 255.0, color.g / 255.0, color.b / 255.0, color.a / 255.0);
@@ -458,9 +471,6 @@ namespace TSRPA
                 }
             }
         }
-    
-        
-    
     };
 
 };
