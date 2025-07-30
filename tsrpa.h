@@ -5,6 +5,10 @@
 #include <glm/glm.hpp>
 #include <vector>
 
+#ifndef MAX_BONE_INFLUENCE
+#define MAX_BONE_INFLUENCE 4
+#endif
+
 namespace TSRPA
 {
 
@@ -54,8 +58,6 @@ namespace TSRPA
 
         bool is_valid() { return width > 0 && height > 0 && data.size() == width * height * 4; }
 
-        
-
         glm::ivec4 get_color(const unsigned int &x, const unsigned int &y)
         {
             if (!is_valid())
@@ -68,7 +70,7 @@ namespace TSRPA
 
         glm::ivec4 get_sample(glm::vec2 uv)
         {
-            return get_color(uv.x * width,height - (uv.y * height));
+            return get_color(uv.x * width, height - (uv.y * height));
         }
 
         void set_color(const unsigned int &x, const unsigned int &y, const glm::ivec4 &color)
@@ -81,6 +83,20 @@ namespace TSRPA
         }
     };
 
+    class Material
+    {
+    public:
+        Material() {}
+    };
+
+    struct VertexIndex
+    {
+        int vertex_index;
+        int uv_index[2];
+        int normal_index;
+        int color_index;
+    };
+
     class Mesh
     {
     public:
@@ -89,6 +105,12 @@ namespace TSRPA
         std::vector<float> uv;
         std::vector<float> normal;
         std::vector<float> color;
+        std::vector<Material> materials;
+        std::vector<int> material_idx;
+
+        std::vector<int> bone_index;
+        std::vector<float> bone_weight;
+
         Mesh() {}
         bool is_valid() { return vert_count > 0; }
     };
@@ -112,8 +134,6 @@ namespace TSRPA
                 data[i + 3] = clear_color.a;
             }
         }
-
-        
     };
 
     enum DeephMode
@@ -211,12 +231,14 @@ namespace TSRPA
         FrameBuffer *frame_buffer;
         ZBuffer *zbuffer;
 
+        glm::mat4 view_matrix;
+        glm::mat4 projection_matrix;
+
         Renderer(unsigned int width, unsigned int height)
         {
             this->width = width;
             this->height = height;
             this->data_size = this->width * this->height * 4;
-            
 
             frame_buffer = new FrameBuffer(this->width, this->height);
             zbuffer = new ZBuffer(this->width, this->height);
@@ -242,10 +264,6 @@ namespace TSRPA
         {
 
             const unsigned int i = (y * width + x) * 4;
-            if (i + 3 >= data_size - 1)
-            {
-                return false;
-            }
 
             frame_buffer->data[i] = color.r;
             frame_buffer->data[i + 1] = color.g;
@@ -429,9 +447,7 @@ namespace TSRPA
                         {
                             uv_cord += uv[i] * bc_screen[i];
                         }
-
-                        // printf("uv_cord ( %f %f )\n",uv_cord.x,uv_cord.y);
-                        //glm::ivec4 texture_color = texture.get_color(uv_cord.x * texture.width, texture.height - (uv_cord.y * texture.height));
+                        
                         glm::ivec4 texture_color = texture.get_sample(uv_cord);
                         glm::vec4 glm_texture_color(texture_color.r / 255.0, texture_color.g / 255.0, texture_color.b / 255.0, texture_color.a / 255.0);
                         glm::vec4 glm_alpha_color(color.r / 255.0, color.g / 255.0, color.b / 255.0, color.a / 255.0);
@@ -442,6 +458,9 @@ namespace TSRPA
                 }
             }
         }
+    
+        
+    
     };
 
 };

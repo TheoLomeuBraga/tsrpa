@@ -182,12 +182,10 @@ void render_model_triangles_with_deeph_and_light(TSRPA::Renderer &ren, const TSR
 }
 
 glm::mat4 model_transform_matrix;
-glm::mat4 view;
-glm::mat4 projection;
 void render_model_triangles_with_deeph_and_texture(TSRPA::Renderer &ren, TSRPA::Mesh &mesh, TSRPA::Texture &texture)
 {
 
-    glm::mat4 mvp = projection * view * model_transform_matrix;
+    glm::mat4 mvp = ren.projection_matrix * ren.view_matrix * model_transform_matrix;
 
     for (unsigned int i = 0; i < mesh.vert_count; i += 3)
     {
@@ -295,13 +293,13 @@ int main(int argc, char *argv[])
     glm::vec3 model_pos(0.0f, 0.0f, 5.0f);
     model_transform_matrix = glm::translate(glm::mat4(1.0f), model_pos);
 
-    view = glm::lookAt(
+    ren.view_matrix = glm::lookAt(
         glm::vec3(0.0f, 0.0f, 0.0f),
         model_pos,
         glm::vec3(0.0f, 1.0f, 0.0f));
 
     // Matriz de Projeção
-    projection = glm::perspective(
+    ren.projection_matrix = glm::perspective(
         glm::radians(45.0f),
         float(ren.width) / float(ren.height),
         0.1f,
