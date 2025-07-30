@@ -111,10 +111,11 @@ namespace TSRPA
     {
     public:
         unsigned int vert_count;
-        std::vector<float> vertex;
-        std::vector<float> uv;
-        std::vector<float> normal;
-        std::vector<float> color;
+        std::vector<glm::vec3> vertex;
+        std::vector<glm::vec2> uv;
+        std::vector<glm::vec2> uv2;
+        std::vector<glm::vec3> normal;
+        std::vector<glm::vec3> color;
         std::vector<Material> materials;
         std::vector<int> material_idx;
 
@@ -356,12 +357,12 @@ namespace TSRPA
             }
         }
 
-        glm::vec3 calculate_screen_position(const float &x, const float &y, const float &z, const glm::mat4 &model_transform_matrix)
+        glm::vec3 calculate_screen_position(const glm::vec3 &vertex, const glm::mat4 &model_transform_matrix)
         {
 
             glm::mat4 mvp = projection_matrix * view_matrix * model_transform_matrix;
 
-            glm::vec4 clip_space_pos = mvp * glm::vec4(x, y, z, 1.0);
+            glm::vec4 clip_space_pos = mvp * glm::vec4(vertex, 1.0);
 
             glm::vec3 space_pos;
             space_pos.x = clip_space_pos.x / clip_space_pos.w;

@@ -99,29 +99,35 @@ public:
                 {
                     // access to vertex
                     tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
-                    this->vertex.push_back(attrib.vertices[3 * size_t(idx.vertex_index) + 0]);
-                    this->vertex.push_back(attrib.vertices[3 * size_t(idx.vertex_index) + 1]);
-                    this->vertex.push_back(attrib.vertices[3 * size_t(idx.vertex_index) + 2]);
+                    this->vertex.push_back(glm::vec3(
+                        attrib.vertices[3 * size_t(idx.vertex_index) + 0],
+                        attrib.vertices[3 * size_t(idx.vertex_index) + 1],
+                        attrib.vertices[3 * size_t(idx.vertex_index) + 2]));
 
                     // Check if `normal_index` is zero or positive. negative = no normal data
                     if (idx.normal_index >= 0)
                     {
-                        this->normal.push_back(attrib.normals[3 * size_t(idx.normal_index) + 0]);
-                        this->normal.push_back(attrib.normals[3 * size_t(idx.normal_index) + 1]);
-                        this->normal.push_back(attrib.normals[3 * size_t(idx.normal_index) + 2]);
+                        this->normal.push_back(glm::vec3(
+                            attrib.normals[3 * size_t(idx.normal_index) + 0],
+                            attrib.normals[3 * size_t(idx.normal_index) + 1],
+                            attrib.normals[3 * size_t(idx.normal_index) + 2]));
                     }
 
                     // Check if `texcoord_index` is zero or positive. negative = no texcoord data
                     if (idx.texcoord_index >= 0)
                     {
-                        this->uv.push_back(attrib.texcoords[2 * size_t(idx.texcoord_index) + 0]);
-                        this->uv.push_back(attrib.texcoords[2 * size_t(idx.texcoord_index) + 1]);
+                        this->uv.push_back(glm::vec2(
+                            attrib.texcoords[2 * size_t(idx.texcoord_index) + 0],
+                            attrib.texcoords[2 * size_t(idx.texcoord_index) + 1]
+                        ));
                     }
 
                     // Optional: vertex colors
-                    this->color.push_back(attrib.colors[3 * size_t(idx.vertex_index) + 0]);
-                    this->color.push_back(attrib.colors[3 * size_t(idx.vertex_index) + 1]);
-                    this->color.push_back(attrib.colors[3 * size_t(idx.vertex_index) + 2]);
+                    this->color.push_back(glm::vec3(
+                        attrib.colors[3 * size_t(idx.vertex_index) + 0],
+                        attrib.colors[3 * size_t(idx.vertex_index) + 1],
+                        attrib.colors[3 * size_t(idx.vertex_index) + 2]
+                    ));
                 }
                 index_offset += fv;
 
@@ -129,7 +135,7 @@ public:
                 shapes[s].mesh.material_ids[f];
             }
         }
-        this->vert_count = this->vertex.size() / 3;
+        this->vert_count = this->vertex.size();
     }
 };
 
@@ -151,6 +157,7 @@ void render_texture(TSRPA::Renderer &ren, TSRPA::Texture &texture)
     }
 }
 
+glm::mat4 model_transform_matrix;
 void render_model_triangles_with_deeph_and_light(TSRPA::Renderer &ren, const TSRPA::Mesh &mesh, const glm::vec3 &light_rit)
 {
 
@@ -161,16 +168,11 @@ void render_model_triangles_with_deeph_and_light(TSRPA::Renderer &ren, const TSR
 
         glm::vec3 points[3];
 
-        glm::vec3 va(mesh.vertex[(i * 3) + 0], mesh.vertex[(i * 3) + 1], mesh.vertex[(i * 3) + 2]);
-        points[0] = glm::vec3((va.x + 1.0) * ren.width / 2.0, ren.height - (va.y + 1.0) * ren.height / 2.0, va.z);
+        points[0] = ren.calculate_screen_position(mesh.vertex[i], model_transform_matrix);
+        points[1] = ren.calculate_screen_position(mesh.vertex[i+1], model_transform_matrix);
+        points[2] = ren.calculate_screen_position(mesh.vertex[i+2], model_transform_matrix);
 
-        glm::vec3 vb(mesh.vertex[(i * 3) + 3], mesh.vertex[(i * 3) + 4], mesh.vertex[(i * 3) + 5]);
-        points[1] = glm::vec3((vb.x + 1.0) * ren.width / 2.0, ren.height - (vb.y + 1.0) * ren.height / 2.0, vb.z);
-
-        glm::vec3 vc(mesh.vertex[(i * 3) + 6], mesh.vertex[(i * 3) + 7], mesh.vertex[(i * 3) + 8]);
-        points[2] = glm::vec3((vc.x + 1.0) * ren.width / 2.0, ren.height - (vc.y + 1.0) * ren.height / 2.0, vc.z);
-
-        glm::vec3 n = glm::normalize(glm::cross(vc - va, vb - va));
+        glm::vec3 n = glm::normalize(glm::cross(points[2] - points[0], points[1] - points[0]));
         float intensity = glm::dot(n, light_rit);
         if (intensity < 0.0)
         {
@@ -181,30 +183,22 @@ void render_model_triangles_with_deeph_and_light(TSRPA::Renderer &ren, const TSR
     }
 }
 
-glm::mat4 model_transform_matrix;
 void render_model_triangles_with_deeph_and_texture(TSRPA::Renderer &ren, TSRPA::Mesh &mesh, TSRPA::Texture &texture)
 {
-
-    
 
     for (unsigned int i = 0; i < mesh.vert_count; i += 3)
     {
 
         glm::vec3 points[3];
 
-        points[0] = ren.calculate_screen_position(mesh.vertex[(i * 3) + 0], mesh.vertex[(i * 3) + 1], mesh.vertex[(i * 3) + 2], model_transform_matrix);
-        points[1] = ren.calculate_screen_position(mesh.vertex[(i * 3) + 3], mesh.vertex[(i * 3) + 4], mesh.vertex[(i * 3) + 5], model_transform_matrix);
-        points[2] = ren.calculate_screen_position(mesh.vertex[(i * 3) + 6], mesh.vertex[(i * 3) + 7], mesh.vertex[(i * 3) + 8], model_transform_matrix);
+        points[0] = ren.calculate_screen_position(mesh.vertex[i], model_transform_matrix);
+        points[1] = ren.calculate_screen_position(mesh.vertex[i+1], model_transform_matrix);
+        points[2] = ren.calculate_screen_position(mesh.vertex[i+2], model_transform_matrix);
 
         glm::vec2 uv[3];
-        glm::vec2 uva = glm::vec2(mesh.uv[(i * 2) + 0], mesh.uv[(i * 2) + 1]);
-        uv[0] = uva;
-
-        glm::vec2 uvb = glm::vec2(mesh.uv[(i * 2) + 2], mesh.uv[(i * 2) + 3]);
-        uv[1] = uvb;
-
-        glm::vec2 uvc = glm::vec2(mesh.uv[(i * 2) + 4], mesh.uv[(i * 2) + 5]);
-        uv[2] = uvc;
+        uv[0] = mesh.uv[i];
+        uv[1] = mesh.uv[i+1];
+        uv[2] = mesh.uv[i+2];
 
         // ren.draw_textured_triangle(points, uv, glm::ivec4(intensity * 255, intensity * 255, intensity * 255, 255), texture);
         ren.draw_textured_triangle(points, uv, TSRPA::Palette::WHITE, texture);
@@ -387,9 +381,8 @@ int main(int argc, char *argv[])
         SDL_UpdateTexture(texture, NULL, (void *)ren.get_result(), pich);
         SDL_RenderTexture(render, texture, NULL, NULL);
 
-        
-
-        if (fps_display_timer >= 1.0){
+        if (fps_display_timer >= 1.0)
+        {
             fps_text = std::string("FPS: ") + std::to_string(fps_frames_passed) + "\n";
             fps_display_timer = 0;
             fps_frames_passed = 0;
