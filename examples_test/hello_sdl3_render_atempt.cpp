@@ -12,6 +12,49 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
+
+class PngTexture : public TSRPA::Texture
+{
+public:
+    PngTexture() : TSRPA::Texture() {}
+    PngTexture(const char *path) : TSRPA::Texture()
+    {
+        // printf("loading: %s\n", path);
+        SDL_Surface *image_data = IMG_Load(path);
+
+        if (!image_data)
+        {
+            SDL_Log("Fail to load image: %s", SDL_GetError());
+            return;
+        }
+
+        SDL_Surface *new_image_data = SDL_ConvertSurface(image_data, SDL_PIXELFORMAT_RGBA32);
+
+        if (!new_image_data)
+        {
+            SDL_Log("Fail to convert surface: %s", SDL_GetError());
+            SDL_DestroySurface(image_data);
+            return;
+        }
+
+        width = new_image_data->w;
+        height = new_image_data->h;
+        data.resize(width * height * 4);
+
+        Uint32 *pixels = (Uint32 *)new_image_data->pixels;
+        for (unsigned int i = 0; i < new_image_data->w * new_image_data->h; i++)
+        {
+            unsigned int data_idx = i * 4;
+            SDL_GetRGBA(pixels[i], SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA32), NULL, &data[data_idx + 0], &data[data_idx + 1], &data[data_idx + 2], &data[data_idx + 3]);
+        }
+
+        SDL_DestroySurface(new_image_data);
+
+        SDL_DestroySurface(image_data);
+    }
+};
+
+
 class ObjMesh : public TSRPA::Mesh
 {
 public:
@@ -38,6 +81,11 @@ public:
         const tinyobj::attrib_t &attrib = reader.GetAttrib();
         const std::vector<tinyobj::shape_t> &shapes = reader.GetShapes();
         const std::vector<tinyobj::material_t> &materials = reader.GetMaterials();
+
+        if (materials.size() > 0){
+            printf("%s\n",materials[0].alpha_texname.c_str());
+        }
+        
 
         for (size_t s = 0; s < shapes.size(); s++)
         {
@@ -86,46 +134,6 @@ public:
     }
 };
 
-class PngTexture : public TSRPA::Texture
-{
-public:
-    PngTexture() : TSRPA::Texture() {}
-    PngTexture(const char *path) : TSRPA::Texture()
-    {
-        // printf("loading: %s\n", path);
-        SDL_Surface *image_data = IMG_Load(path);
-
-        if (!image_data)
-        {
-            SDL_Log("Fail to load image: %s", SDL_GetError());
-            return;
-        }
-
-        SDL_Surface *new_image_data = SDL_ConvertSurface(image_data, SDL_PIXELFORMAT_RGBA32);
-
-        if (!new_image_data)
-        {
-            SDL_Log("Fail to convert surface: %s", SDL_GetError());
-            SDL_DestroySurface(image_data);
-            return;
-        }
-
-        width = new_image_data->w;
-        height = new_image_data->h;
-        data = new unsigned char[width * height * 4];
-
-        Uint32 *pixels = (Uint32 *)new_image_data->pixels;
-        for (unsigned int i = 0; i < new_image_data->w * new_image_data->h; i++)
-        {
-            unsigned int data_idx = i * 4;
-            SDL_GetRGBA(pixels[i], SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA32), NULL, &data[data_idx + 0], &data[data_idx + 1], &data[data_idx + 2], &data[data_idx + 3]);
-        }
-
-        SDL_DestroySurface(new_image_data);
-
-        SDL_DestroySurface(image_data);
-    }
-};
 
 ObjMesh last_mesh;
 PngTexture last_texture;
@@ -176,24 +184,14 @@ void render_model_triangles_with_deeph_and_light(TSRPA::Render &ren, const TSRPA
 }
 
 glm::mat4 model_transform_matrix;
-void render_model_triangles_with_deeph_and_texture(TSRPA::Render &ren, TSRPA::Mesh &mesh, const glm::vec3 &light_rit, TSRPA::Texture &texture)
+glm::mat4 view;
+glm::mat4 projection;
+void render_model_triangles_with_deeph_and_texture(TSRPA::Render &ren, TSRPA::Mesh &mesh, TSRPA::Texture &texture)
 {
-
-    glm::mat4 view = glm::lookAt(
-        glm::vec3(0.0f, 0.0f, -5.0f),
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 0.0f));
-
-    // Matriz de Projeção
-    glm::mat4 projection = glm::perspective(
-        glm::radians(45.0f),
-        float(ren.width) / float(ren.height),
-        0.1f,
-        100.0f);
 
     glm::mat4 mvp = projection * view * model_transform_matrix;
 
-    ren.zbuffer->set_deeph_mode(TSRPA::DeephMode::LESS);
+    
 
     for (unsigned int i = 0; i < mesh.vert_count; i += 3)
     {
@@ -275,13 +273,25 @@ int main(int argc, char *argv[])
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
     SDL_DestroySurface(surface);
 
-    model_transform_matrix = glm::mat4(1.0f);
-    // model_transform_matrix = glm::translate(model_transform_matrix, glm::vec3(0.0f, 0.0f, 0.0f));
-    // model_transform_matrix = glm::rotate(model_transform_matrix, glm::radians(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    // model_transform_matrix = glm::scale(model_transform_matrix, glm::vec3(1.0f));
+    glm::vec3 model_pos(0.0f, 0.0f, 5.0f);
+    model_transform_matrix = glm::translate(glm::mat4(1.0f), model_pos);
+
+    view = glm::lookAt(
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        model_pos,
+        glm::vec3(0.0f, 1.0f, 0.0f));
+
+    // Matriz de Projeção
+    projection = glm::perspective(
+        glm::radians(45.0f),
+        float(ren.width) / float(ren.height),
+        0.1f,
+        100.0f);
 
     unsigned int lastTime = 0, currentTime;
     double delta_time;
+
+    ren.zbuffer->set_deeph_mode(TSRPA::DeephMode::LESS);
 
     while (!done)
     {
@@ -319,7 +329,7 @@ int main(int argc, char *argv[])
                     if (last_mesh.is_valid() && last_texture.is_valid())
                     {
 
-                        render_model_triangles_with_deeph_and_texture(ren, last_mesh, glm::vec3(0, 0, -1), last_texture);
+                        render_model_triangles_with_deeph_and_texture(ren, last_mesh, last_texture);
                     }
                     else
                     {
@@ -331,26 +341,13 @@ int main(int argc, char *argv[])
             }
         }
 
-        printf("A\n");
-        last_mesh.is_valid();
-        printf("B\n");
-        last_texture.is_valid();
-        printf("C\n");
-        if (last_texture.is_valid())
-        {
-            printf("%u\n", last_texture.data[0]);
-        }
-        printf("D\n");
-
         if (last_mesh.is_valid() && last_texture.is_valid())
         {
             ren.frame_buffer->clear_color = TSRPA::Palette::INVISIBLE;
             ren.clear();
             model_transform_matrix = glm::rotate(model_transform_matrix, (float)(glm::radians(90.0f) * delta_time), glm::vec3(0.0f, 1.0f, 0.0f));
-            render_model_triangles_with_deeph_and_texture(ren, last_mesh, glm::vec3(0, 0, -1), last_texture);
+            render_model_triangles_with_deeph_and_texture(ren, last_mesh, last_texture);
         }
-
-        printf("F\n");
 
         // Do game logic, present a frame, etc.
         SDL_RenderClear(render);

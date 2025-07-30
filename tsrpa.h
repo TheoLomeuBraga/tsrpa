@@ -3,6 +3,7 @@
 #include <cmath>
 #include <functional>
 #include <glm/glm.hpp>
+#include <vector>
 
 namespace TSRPA
 {
@@ -36,42 +37,31 @@ namespace TSRPA
     public:
         unsigned int width = 0;
         unsigned int height = 0;
-        unsigned char *data = NULL;
+        std::vector<unsigned char> data;
         Texture() {}
         Texture(unsigned int width, unsigned int height)
         {
             this->width = width;
             this->height = height;
-            this->data = new unsigned char[width * height * 4];
+            this->data.resize(width * height * 4);
         }
-        Texture(unsigned int width,unsigned int height,unsigned char *data) {
+        Texture(unsigned int width, unsigned int height, std::vector<unsigned char> data)
+        {
             this->width = width;
             this->height = height;
             this->data = data;
         }
-        ~Texture()
-        {
-            if (data)
-            {
-                delete[] data;
-            }
-        }
 
-        bool is_valid() { return width > 0 && height > 0; }
-
-        Texture operator=(Texture const &obj)
-        {
-            data = new unsigned char[obj.width * obj.height * 4];
-            memcpy(data,obj.data,sizeof(unsigned char) * obj.width * obj.height * 4);
-            width = obj.width;
-            height = obj.height;
-            return *this;
-        }
+        bool is_valid() { return width > 0 && height > 0 && data.size() == width * height * 4; }
 
         
 
         glm::ivec4 get_color(const unsigned int &x, const unsigned int &y)
         {
+            if (!is_valid())
+            {
+                return glm::ivec4(255, 255, 255, 255);
+            }
             unsigned int i = ((y % height) * width + (x % width)) * 4;
             return glm::ivec4(data[i], data[i + 1], data[i + 2], data[i + 3]);
         }
@@ -105,7 +95,7 @@ namespace TSRPA
 
         FrameBuffer() : Texture() {}
 
-        FrameBuffer(unsigned int width, unsigned int height) : Texture(width,height){}
+        FrameBuffer(unsigned int width, unsigned int height) : Texture(width, height) {}
 
         void clear()
         {
@@ -118,13 +108,7 @@ namespace TSRPA
             }
         }
 
-        ~FrameBuffer()
-        {
-            if (this->data != NULL)
-            {
-                delete[] this->data;
-            }
-        }
+        
     };
 
     enum DeephMode
@@ -140,7 +124,7 @@ namespace TSRPA
     public:
         unsigned int width;
         unsigned int height;
-        float *data;
+        std::vector<float> data;
 
     private:
         DeephMode mode;
@@ -177,7 +161,7 @@ namespace TSRPA
         {
             this->width = width;
             this->height = height;
-            this->data = new float[width * height];
+            this->data.resize(width * height);
             this->mode = DeephMode::NONE;
             deep_check_func = std::bind(&ZBuffer::deep_check_none, this, std::placeholders::_1, std::placeholders::_2);
         }
@@ -208,13 +192,8 @@ namespace TSRPA
         {
             for (unsigned int i = 0; i < width * height; i++)
             {
-                data[i] = 0;
+                data[i] = 0.0;
             }
-        }
-
-        ~ZBuffer()
-        {
-            delete[] this->data;
         }
     };
 
@@ -232,6 +211,8 @@ namespace TSRPA
             this->width = width;
             this->height = height;
             this->data_size = this->width * this->height * 4;
+            
+
             frame_buffer = new FrameBuffer(this->width, this->height);
             zbuffer = new ZBuffer(this->width, this->height);
         }
@@ -243,7 +224,7 @@ namespace TSRPA
 
         unsigned char *get_result()
         {
-            return frame_buffer->data;
+            return &frame_buffer->data[0];
         }
 
         void clear()
@@ -354,7 +335,7 @@ namespace TSRPA
             glm::vec3 screenSpacePos;
             screenSpacePos.x = (space_pos.x + 1.0f) * 0.5f * width;
             screenSpacePos.y = (1.0f - space_pos.y) * 0.5f * height;
-            screenSpacePos.z = space_pos.z;
+            screenSpacePos.z = 1.0f - space_pos.z;
 
             return screenSpacePos;
         }
