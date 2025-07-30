@@ -31,18 +31,24 @@ namespace TSRPA
         return glm::ivec4(to_uchar_value(r), to_uchar_value(g), to_uchar_value(b), to_uchar_value(a));
     }
 
-    glm::ivec4 create_color256(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
-    {
-        return glm::ivec4(r, g, b, a);
-    }
-
     class Texture
     {
     public:
-        unsigned int width;
-        unsigned int height;
+        unsigned int width = 0;
+        unsigned int height = 0;
         unsigned char *data = NULL;
         Texture() {}
+        Texture(unsigned int width, unsigned int height)
+        {
+            this->width = width;
+            this->height = height;
+            this->data = new unsigned char[width * height * 4];
+        }
+        Texture(unsigned int width,unsigned int height,unsigned char *data) {
+            this->width = width;
+            this->height = height;
+            this->data = data;
+        }
         ~Texture()
         {
             if (data)
@@ -53,10 +59,21 @@ namespace TSRPA
 
         bool is_valid() { return width > 0 && height > 0; }
 
+        Texture operator=(Texture const &obj)
+        {
+            data = new unsigned char[obj.width * obj.height * 4];
+            memcpy(data,obj.data,sizeof(unsigned char) * obj.width * obj.height * 4);
+            width = obj.width;
+            height = obj.height;
+            return *this;
+        }
+
+        
+
         glm::ivec4 get_color(const unsigned int &x, const unsigned int &y)
         {
             unsigned int i = ((y % height) * width + (x % width)) * 4;
-            return create_color256(data[i], data[i + 1], data[i + 2], data[i + 3]);
+            return glm::ivec4(data[i], data[i + 1], data[i + 2], data[i + 3]);
         }
 
         void set_color(const unsigned int &x, const unsigned int &y, const glm::ivec4 &color)
@@ -81,22 +98,14 @@ namespace TSRPA
         bool is_valid() { return vert_count > 0; }
     };
 
-    class FrameBuffer
+    class FrameBuffer : public Texture
     {
     public:
-        unsigned int width;
-        unsigned int height;
-        unsigned char *data;
         glm::ivec4 clear_color;
 
-        FrameBuffer() {}
+        FrameBuffer() : Texture() {}
 
-        FrameBuffer(unsigned int width, unsigned int height)
-        {
-            this->width = width;
-            this->height = height;
-            this->data = new unsigned char[width * height * 4];
-        }
+        FrameBuffer(unsigned int width, unsigned int height) : Texture(width,height){}
 
         void clear()
         {
@@ -333,6 +342,23 @@ namespace TSRPA
             }
         }
 
+        glm::vec3 calculate_screen_position(const float &x, const float &y, const float &z, const glm::mat4 &mvp)
+        {
+            glm::vec4 clip_space_pos = mvp * glm::vec4(x, y, z, 1.0);
+
+            glm::vec3 space_pos;
+            space_pos.x = clip_space_pos.x / clip_space_pos.w;
+            space_pos.y = clip_space_pos.y / clip_space_pos.w;
+            space_pos.z = clip_space_pos.z / clip_space_pos.w;
+
+            glm::vec3 screenSpacePos;
+            screenSpacePos.x = (space_pos.x + 1.0f) * 0.5f * width;
+            screenSpacePos.y = (1.0f - space_pos.y) * 0.5f * height;
+            screenSpacePos.z = space_pos.z;
+
+            return screenSpacePos;
+        }
+
         glm::vec3 barycentric(const glm::vec3 *pts, const glm::vec3 &P)
         {
             glm::vec3 u = glm::cross(glm::vec3(pts[2][0] - pts[0][0], pts[1][0] - pts[0][0], pts[0][0] - P[0]), glm::vec3(pts[2][1] - pts[0][1], pts[1][1] - pts[0][1], pts[0][1] - P[1]));
@@ -412,16 +438,19 @@ namespace TSRPA
                     }
                     if (zbuffer->calculate_deep_check(int(P.x + P.y * width), P.z))
                     {
-                        glm::vec2 uv_cord(0.0,0.0);
+                        glm::vec2 uv_cord(0.0, 0.0);
                         for (int i = 0; i < 3; i++)
                         {
                             uv_cord += uv[i] * bc_screen[i];
                         }
+
+                        // printf("uv_cord ( %f %f )\n",uv_cord.x,uv_cord.y);
                         glm::ivec4 texture_color = texture.get_color(uv_cord.x * texture.width, texture.height - (uv_cord.y * texture.height));
-                        glm::vec4 glm_texture_color(texture_color.r/255.0,texture_color.g/255.0,texture_color.b/255.0,texture_color.a/255.0);
-                        glm::vec4 glm_alpha_color(color.r/255.0,color.g/255.0,color.b/255.0,color.a/255.0);
+                        glm::vec4 glm_texture_color(texture_color.r / 255.0, texture_color.g / 255.0, texture_color.b / 255.0, texture_color.a / 255.0);
+                        glm::vec4 glm_alpha_color(color.r / 255.0, color.g / 255.0, color.b / 255.0, color.a / 255.0);
                         glm::vec4 glm_final_color = glm_alpha_color * glm_texture_color;
-                        draw_point(P.x, P.y, create_color(glm_final_color.r,glm_final_color.g,glm_final_color.b,glm_final_color.a) );
+
+                        draw_point(P.x, P.y, create_color(glm_final_color.r, glm_final_color.g, glm_final_color.b, glm_final_color.a));
                     }
                 }
             }
