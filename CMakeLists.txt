@@ -31,6 +31,7 @@ add_executable(hello_sdl3_dynamic_texture examples_test/hello_sdl3_dynamic_textu
 target_link_options(hello_sdl3_dynamic_texture PRIVATE -static-libgcc -static-libstdc++)
 target_link_libraries(hello_sdl3_dynamic_texture PRIVATE SDL3::SDL3-static)
 
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/examples_test/assets/AlienCyborg.ttf DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 add_executable(hello_sdl3_render_atempt examples_test/hello_sdl3_render_atempt.cpp)
 target_link_options(hello_sdl3_render_atempt PRIVATE -static-libgcc -static-libstdc++)
 target_link_libraries(hello_sdl3_render_atempt PRIVATE SDL3::SDL3-static SDL3_image::SDL3_image-static SDL3_ttf::SDL3_ttf-static glm::glm)

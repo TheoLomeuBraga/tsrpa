@@ -3,6 +3,7 @@
 #include <vector>
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
+#include <SDL3_ttf/SDL_ttf.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -11,7 +12,6 @@
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
-
 
 class PngTexture : public TSRPA::Texture
 {
@@ -54,7 +54,6 @@ public:
     }
 };
 
-
 class ObjMesh : public TSRPA::Mesh
 {
 public:
@@ -82,10 +81,10 @@ public:
         const std::vector<tinyobj::shape_t> &shapes = reader.GetShapes();
         const std::vector<tinyobj::material_t> &materials = reader.GetMaterials();
 
-        if (materials.size() > 0){
-            printf("%s\n",materials[0].alpha_texname.c_str());
+        if (materials.size() > 0)
+        {
+            printf("%s\n", materials[0].alpha_texname.c_str());
         }
-        
 
         for (size_t s = 0; s < shapes.size(); s++)
         {
@@ -134,11 +133,10 @@ public:
     }
 };
 
-
 ObjMesh last_mesh;
 PngTexture last_texture;
 
-void render_texture(TSRPA::Render &ren, TSRPA::Texture &texture)
+void render_texture(TSRPA::Renderer &ren, TSRPA::Texture &texture)
 {
     if (texture.width == 0 || texture.height == 0)
     {
@@ -153,7 +151,7 @@ void render_texture(TSRPA::Render &ren, TSRPA::Texture &texture)
     }
 }
 
-void render_model_triangles_with_deeph_and_light(TSRPA::Render &ren, const TSRPA::Mesh &mesh, const glm::vec3 &light_rit)
+void render_model_triangles_with_deeph_and_light(TSRPA::Renderer &ren, const TSRPA::Mesh &mesh, const glm::vec3 &light_rit)
 {
 
     ren.zbuffer->set_deeph_mode(TSRPA::DeephMode::LESS);
@@ -186,12 +184,10 @@ void render_model_triangles_with_deeph_and_light(TSRPA::Render &ren, const TSRPA
 glm::mat4 model_transform_matrix;
 glm::mat4 view;
 glm::mat4 projection;
-void render_model_triangles_with_deeph_and_texture(TSRPA::Render &ren, TSRPA::Mesh &mesh, TSRPA::Texture &texture)
+void render_model_triangles_with_deeph_and_texture(TSRPA::Renderer &ren, TSRPA::Mesh &mesh, TSRPA::Texture &texture)
 {
 
     glm::mat4 mvp = projection * view * model_transform_matrix;
-
-    
 
     for (unsigned int i = 0; i < mesh.vert_count; i += 3)
     {
@@ -217,6 +213,23 @@ void render_model_triangles_with_deeph_and_texture(TSRPA::Render &ren, TSRPA::Me
     }
 }
 
+void print_mesage(SDL_Renderer *render, TTF_Font *font, const std::string &text)
+{
+    SDL_Color white = {255, 255, 255, 255};
+    const char *message = text.c_str();
+    SDL_Surface *surfaceMessage = TTF_RenderText_Solid(font, message, sizeof(message), white);
+    SDL_Texture *Message = SDL_CreateTextureFromSurface(render, surfaceMessage);
+    SDL_SetTextureScaleMode(Message, SDL_SCALEMODE_NEAREST);
+    SDL_FRect Message_rect;
+    Message_rect.x = 0;
+    Message_rect.y = 0;
+    Message_rect.w = 256;
+    Message_rect.h = 64;
+    SDL_RenderTexture(render, Message, NULL, &Message_rect);
+    SDL_DestroySurface(surfaceMessage);
+    SDL_DestroyTexture(Message);
+}
+
 int main(int argc, char *argv[])
 {
 
@@ -225,6 +238,12 @@ int main(int argc, char *argv[])
 
     SDL_Init(SDL_INIT_VIDEO); // Initialize SDL3
     SDL_srand(42);
+
+    if (TTF_Init() == -1)
+    {
+        std::cerr << "TTF_Init failed: " << SDL_GetError() << std::endl;
+        return 1;
+    }
 
     // Create an application window with the following settings:
     window = SDL_CreateWindow(
@@ -252,7 +271,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    TSRPA::Render ren(1024, 1024);
+    TSRPA::Renderer ren(1024, 1024);
     ren.frame_buffer->clear_color = TSRPA::Palette::INVISIBLE;
     ren.clear();
 
@@ -293,12 +312,28 @@ int main(int argc, char *argv[])
 
     ren.zbuffer->set_deeph_mode(TSRPA::DeephMode::LESS);
 
+    std::string font_path = std::string(SDL_GetBasePath()) + "AlienCyborg.ttf";
+
+    TTF_Font *font = TTF_OpenFont(font_path.c_str(), 24);
+    if (font == NULL)
+    {
+        printf("error file AlienCyborg.ttf not found\n");
+        return 0;
+    }
+
+    float fps_display_timer = 0.0f;
+    unsigned int fps_frames_passed = 0;
+    std::string fps_text = "hello world";
+
     while (!done)
     {
 
         currentTime = SDL_GetTicks();
         delta_time = (double)((currentTime - lastTime) * 1000 / (double)SDL_GetPerformanceFrequency()) * 1000;
         lastTime = currentTime;
+
+        fps_display_timer += delta_time;
+        fps_frames_passed++;
 
         SDL_Event event;
 
@@ -353,6 +388,16 @@ int main(int argc, char *argv[])
         SDL_RenderClear(render);
         SDL_UpdateTexture(texture, NULL, (void *)ren.get_result(), pich);
         SDL_RenderTexture(render, texture, NULL, NULL);
+
+        
+
+        if (fps_display_timer >= 1.0){
+            fps_text = std::string("FPS: ") + std::to_string(fps_frames_passed) + "\n";
+            fps_display_timer = 0;
+            fps_frames_passed = 0;
+        }
+        print_mesage(render, font, fps_text);
+
         SDL_RenderPresent(render);
     }
 

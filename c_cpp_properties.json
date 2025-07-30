@@ -8,6 +8,7 @@
                 "${workspaceFolder}/examples_test",
                 "${workspaceFolder}/examples_test/libs/SDL",
                 "${workspaceFolder}/examples_test/libs/SDL_image",
+                "${workspaceFolder}/examples_test/libs/SDL_ttf",
                 "${workspaceFolder}/examples_test/tiny_obj_loader"
             ]
         }

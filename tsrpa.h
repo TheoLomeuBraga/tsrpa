@@ -66,6 +66,11 @@ namespace TSRPA
             return glm::ivec4(data[i], data[i + 1], data[i + 2], data[i + 3]);
         }
 
+        glm::ivec4 get_sample(glm::vec2 uv)
+        {
+            return get_color(uv.x * width,height - (uv.y * height));
+        }
+
         void set_color(const unsigned int &x, const unsigned int &y, const glm::ivec4 &color)
         {
             unsigned int i = (y * width + x) * 4;
@@ -197,7 +202,7 @@ namespace TSRPA
         }
     };
 
-    class Render
+    class Renderer
     {
     public:
         unsigned int width;
@@ -206,7 +211,7 @@ namespace TSRPA
         FrameBuffer *frame_buffer;
         ZBuffer *zbuffer;
 
-        Render(unsigned int width, unsigned int height)
+        Renderer(unsigned int width, unsigned int height)
         {
             this->width = width;
             this->height = height;
@@ -216,7 +221,7 @@ namespace TSRPA
             frame_buffer = new FrameBuffer(this->width, this->height);
             zbuffer = new ZBuffer(this->width, this->height);
         }
-        ~Render()
+        ~Renderer()
         {
             delete frame_buffer;
             delete zbuffer;
@@ -426,7 +431,8 @@ namespace TSRPA
                         }
 
                         // printf("uv_cord ( %f %f )\n",uv_cord.x,uv_cord.y);
-                        glm::ivec4 texture_color = texture.get_color(uv_cord.x * texture.width, texture.height - (uv_cord.y * texture.height));
+                        //glm::ivec4 texture_color = texture.get_color(uv_cord.x * texture.width, texture.height - (uv_cord.y * texture.height));
+                        glm::ivec4 texture_color = texture.get_sample(uv_cord);
                         glm::vec4 glm_texture_color(texture_color.r / 255.0, texture_color.g / 255.0, texture_color.b / 255.0, texture_color.a / 255.0);
                         glm::vec4 glm_alpha_color(color.r / 255.0, color.g / 255.0, color.b / 255.0, color.a / 255.0);
                         glm::vec4 glm_final_color = glm_alpha_color * glm_texture_color;
