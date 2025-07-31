@@ -161,15 +161,6 @@ void render_texture(TSRPA::Renderer &ren, TSRPA::Texture &texture)
 
 glm::mat4 model_transform_matrix;
 
-void render_model_triangles_with_deeph_and_texture(TSRPA::Renderer &ren, TSRPA::Mesh &mesh){
-    for (unsigned int i = 0; i < mesh.face_count; i++)
-    {
-
-        TSRPA::Material material;
-        ren.draw_shaded_triangle(mesh, i, material, model_transform_matrix);
-    }
-}
-
 class TexturedMaterial : public TSRPA::Material
 {
 public:
@@ -184,18 +175,6 @@ public:
         fragment_shader = std::bind(&TexturedMaterial::textured_fragment, this, std::placeholders::_1);
     }
 };
-
-void render_model_triangles_with_deeph_and_texture(TSRPA::Renderer &ren, TSRPA::Mesh &mesh, TSRPA::Texture &texture)
-{
-
-    for (unsigned int i = 0; i < mesh.face_count; i++)
-    {
-
-        TexturedMaterial material;
-        material.texture = &texture;
-        ren.draw_shaded_triangle(mesh, i, material, model_transform_matrix);
-    }
-}
 
 void print_mesage(SDL_Renderer *render, TTF_Font *font, const std::string &text)
 {
@@ -254,6 +233,9 @@ int main(int argc, char *argv[])
         SDL_Quit();
         return 1;
     }
+
+    TexturedMaterial textured_material;
+    textured_material.texture = &last_texture;
 
     TSRPA::Renderer ren(1024, 1024);
     ren.frame_buffer->clear_color = TSRPA::Palette::INVISIBLE;
@@ -337,7 +319,8 @@ int main(int argc, char *argv[])
                 if (new_mesh.is_valid())
                 {
                     last_mesh = new_mesh;
-                    render_model_triangles_with_deeph_and_texture(ren, last_mesh);
+                    TSRPA::Material material;
+                    ren.draw_shaded_mesh(last_mesh,textured_material,model_transform_matrix);
                 }
 
                 PngTexture new_texture(event.drop.data);
@@ -347,8 +330,7 @@ int main(int argc, char *argv[])
 
                     if (last_mesh.is_valid() && last_texture.is_valid())
                     {
-
-                        render_model_triangles_with_deeph_and_texture(ren, last_mesh, last_texture);
+                        ren.draw_shaded_mesh(last_mesh,textured_material,model_transform_matrix);
                     }
                     else
                     {
@@ -365,7 +347,7 @@ int main(int argc, char *argv[])
             ren.frame_buffer->clear_color = TSRPA::Palette::INVISIBLE;
             ren.clear();
             model_transform_matrix = glm::rotate(model_transform_matrix, (float)(glm::radians(90.0f) * delta_time), glm::vec3(0.0f, 1.0f, 0.0f));
-            render_model_triangles_with_deeph_and_texture(ren, last_mesh, last_texture);
+            ren.draw_shaded_mesh(last_mesh,textured_material,model_transform_matrix);
         }
 
         // Do game logic, present a frame, etc.

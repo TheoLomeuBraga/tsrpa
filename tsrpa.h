@@ -71,7 +71,7 @@ namespace TSRPA
 
         glm::vec4 sample(glm::vec2 uv)
         {
-            return (glm::vec4)(get_color(uv.x * width, height - (uv.y * height))) / glm::vec4(255.0,255.0,255.0,255.0);
+            return (glm::vec4)(get_color(uv.x * width, height - (uv.y * height))) / glm::vec4(255.0, 255.0, 255.0, 255.0);
         }
 
         void set_color(const unsigned int &x, const unsigned int &y, const glm::ivec4 &color)
@@ -86,14 +86,14 @@ namespace TSRPA
 
     struct ShaderFunctionData
     {
-        glm::vec3 position = glm::vec3(0.0,0.0,0.0);
-        glm::vec2 uv = glm::vec2(0.0,0.0);
-        glm::vec2 uv2 = glm::vec2(0.0,0.0);
-        glm::vec3 normal = glm::vec3(0.0,0.0,0.0);
-        glm::vec3 color = glm::vec3(0.0,0.0,0.0);
+        glm::vec3 position = glm::vec3(0.0, 0.0, 0.0);
+        glm::vec2 uv = glm::vec2(0.0, 0.0);
+        glm::vec2 uv2 = glm::vec2(0.0, 0.0);
+        glm::vec3 normal = glm::vec3(0.0, 0.0, 0.0);
+        glm::vec3 color = glm::vec3(0.0, 0.0, 0.0);
 
-        int bone_index[4] = {0,0,0,0};
-        float bone_weight[4] = {0.0,0.0,0.0,0.0};
+        int bone_index[4] = {0, 0, 0, 0};
+        float bone_weight[4] = {0.0, 0.0, 0.0, 0.0};
     };
 
     class Material
@@ -443,7 +443,6 @@ namespace TSRPA
             return glm::vec3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
         }
 
-        
         void draw_shaded_triangle(Mesh &mesh, const unsigned int face_id, Material &material, const glm::mat4 &transform)
         {
             glm::ivec2 bboxmin(width - 1, height - 1);
@@ -491,12 +490,19 @@ namespace TSRPA
                             fragment_data.uv2 += vertex_data[i].uv2 * bc_screen[i];
                             fragment_data.normal += vertex_data[i].normal * bc_screen[i];
                             fragment_data.color += vertex_data[i].color * bc_screen[i];
-                            
                         }
 
                         draw_point(P.x, P.y, material.fragment_shader(fragment_data) * glm::vec4(255, 255, 255, 255));
                     }
                 }
+            }
+        }
+
+        void draw_shaded_mesh(Mesh &mesh, Material &material, const glm::mat4 &transform)
+        {
+            for (unsigned int i = 0; i < mesh.face_count; i++)
+            {
+                draw_shaded_triangle(mesh, i, material, transform);
             }
         }
     };
