@@ -155,7 +155,9 @@ public:
 
     glm::vec4 fragment_shader(TSRPA::ShaderFunctionData &data)
     {
-        return texture->sample(data.uv);
+        glm::vec4 color = texture->sample(data.uv) * std::max(glm::dot(data.normal,glm::vec3(0,0,-1)),0.0f);
+        color.a = 1.0;
+        return color;
     }
     TexturedMaterial() : TSRPA::Material(){}
 };
@@ -261,6 +263,7 @@ int main(int argc, char *argv[])
     double delta_time;
 
     ren.zbuffer->set_deeph_mode(TSRPA::DeephMode::LESS);
+    ren.face_mode = TSRPA::FRONT;
 
     std::string font_path = std::string(SDL_GetBasePath()) + "AlienCyborg.ttf";
 

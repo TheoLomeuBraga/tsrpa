@@ -282,6 +282,13 @@ namespace TSRPA
         }
     };
 
+    enum ShowFaces
+    {
+        BOTH = 0,
+        FRONT = 1,
+        BACK = 2
+    };
+
     class Renderer
     {
     public:
@@ -293,6 +300,8 @@ namespace TSRPA
 
         glm::mat4 view_matrix;
         glm::mat4 projection_matrix;
+
+        ShowFaces face_mode;
 
         Renderer(unsigned int width, unsigned int height)
         {
@@ -451,17 +460,64 @@ namespace TSRPA
             return glm::vec3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
         }
 
-        void draw_shaded_triangle(Mesh &mesh, const unsigned int face_id, Material &material, const glm::mat4 &transform)
+        void draw_shaded_triangle(Mesh &mesh, const unsigned int face_id, Material &material, const glm::mat4 &transform, const glm::mat3 &normal_matrix)
         {
-            glm::ivec2 bboxmin(width - 1, height - 1);
-            glm::ivec2 bboxmax(0, 0);
-            glm::ivec2 clamp(width - 1, height - 1);
-            glm::vec3 points[3];
+
             ShaderFunctionData vertex_data[3];
+
             for (int i = 0; i < 3; i++)
             {
 
                 mesh.get_vertex_data(vertex_data[i], (face_id * 3) + i);
+                
+            }
+
+            if (face_mode == ShowFaces::FRONT)
+            {
+
+                glm::vec3 points[3];
+                points[0] = transform * glm::vec4(vertex_data[0].position, 1.0);
+                points[1] = transform * glm::vec4(vertex_data[1].position, 1.0);
+                points[2] = transform * glm::vec4(vertex_data[2].position, 1.0);
+                
+                glm::vec3 cameraPosition = glm::inverse(view_matrix)[3];
+                glm::vec3 edge1 = points[1] - points[0];
+                glm::vec3 edge2 = points[2] - points[0];
+                glm::vec3 normal = glm::cross(edge1, edge2);
+                glm::vec3 viewDir = cameraPosition - points[0];
+                if (glm::dot(normal, viewDir) < 0.0f)
+                {
+                    return;
+                }
+            }
+            else if (face_mode == ShowFaces::BACK)
+            {
+                glm::vec3 points[3];
+                points[0] = transform * glm::vec4(vertex_data[0].position, 1.0);
+                points[1] = transform * glm::vec4(vertex_data[1].position, 1.0);
+                points[2] = transform * glm::vec4(vertex_data[2].position, 1.0);
+                
+                glm::vec3 cameraPosition = glm::inverse(view_matrix)[3];
+                glm::vec3 edge1 = points[1] - points[0];
+                glm::vec3 edge2 = points[2] - points[0];
+                glm::vec3 normal = glm::cross(edge1, edge2);
+                glm::vec3 viewDir = cameraPosition - points[0];
+                if (glm::dot(normal, viewDir) > 0.0f)
+                {
+                    return;
+                }
+            }
+
+            glm::ivec2 bboxmin(width - 1, height - 1);
+            glm::ivec2 bboxmax(0, 0);
+            glm::ivec2 clamp(width - 1, height - 1);
+            glm::vec3 points[3];
+
+            for (int i = 0; i < 3; i++)
+            {
+
+                vertex_data[i].normal = glm::normalize(normal_matrix * vertex_data[i].normal);
+                
                 material.vertex_shader(vertex_data[i]);
                 points[i] = calculate_screen_position(vertex_data[i].position, transform);
 
@@ -499,6 +555,7 @@ namespace TSRPA
                             fragment_data.normal += vertex_data[i].normal * bc_screen[i];
                             fragment_data.color += vertex_data[i].color * bc_screen[i];
                         }
+                        fragment_data.normal = glm::normalize(fragment_data.normal);
 
                         draw_point(P.x, P.y, material.fragment_shader(fragment_data) * glm::vec4(255, 255, 255, 255));
                     }
@@ -508,9 +565,10 @@ namespace TSRPA
 
         void draw_shaded_mesh(Mesh &mesh, Material &material, const glm::mat4 &transform)
         {
+            glm::mat3 normal_matrix = glm::transpose(glm::inverse(glm::mat3(transform)));
             for (unsigned int i = 0; i < mesh.face_count; i++)
             {
-                draw_shaded_triangle(mesh, i, material, transform);
+                draw_shaded_triangle(mesh, i, material, transform, normal_matrix);
             }
         }
     };
