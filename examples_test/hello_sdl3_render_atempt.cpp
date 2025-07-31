@@ -144,8 +144,6 @@ public:
 ObjMesh last_mesh;
 PngTexture last_texture;
 
-
-
 glm::mat4 model_transform_matrix;
 glm::mat4 model_transparent_transform_matrix;
 
@@ -156,12 +154,27 @@ public:
 
     glm::vec4 fragment_shader(TSRPA::ShaderFunctionData &data)
     {
-        glm::vec4 color = texture->sample(data.uv) * std::max(glm::dot(data.normal,glm::vec3(0,0,-1)),0.0f);
+        glm::vec4 color = texture->sample(data.uv) * std::max(glm::dot(data.normal, glm::vec3(0, 0, -1)), 0.0f);
         color.a = 1.0;
         return color;
     }
-    TexturedMaterial() : TSRPA::Material(){}
+    TexturedMaterial() : TSRPA::Material() {}
 };
+
+class TransparentMaterial : public TSRPA::Material
+{
+public:
+    glm::vec4 color;
+
+    glm::vec4 fragment_shader(TSRPA::ShaderFunctionData &data)
+    {
+        glm::vec4 ret = color * std::max(glm::dot(data.normal, glm::vec3(0.5f, 0.5f, 0)), 0.0f);
+        ret.a = color.a;
+        return ret;
+    }
+    TransparentMaterial() : TSRPA::Material() {}
+};
+TransparentMaterial transparent_material;
 
 void print_mesage(SDL_Renderer *render, TTF_Font *font, const std::string &text)
 {
@@ -243,7 +256,9 @@ int main(int argc, char *argv[])
     glm::vec3 model_pos(0.0f, 0.0f, 5.0f);
     model_transform_matrix = glm::translate(glm::mat4(1.0f), model_pos);
     model_transparent_transform_matrix = glm::translate(glm::mat4(1.0f), model_pos);
-    model_transparent_transform_matrix = glm::scale(model_transparent_transform_matrix,glm::vec3(1.5,1.5,1.5));
+    model_transparent_transform_matrix = glm::scale(model_transparent_transform_matrix, glm::vec3(1.5, 1.5, 1.5));
+
+    transparent_material.color = glm::vec4(0.5, 0.5, 1.0, 0.2);
 
     ren.view_matrix = glm::lookAt(
         glm::vec3(0.0f, 0.0f, 0.0f),
@@ -305,7 +320,7 @@ int main(int argc, char *argv[])
                 {
                     last_mesh = new_mesh;
                     TSRPA::Material material;
-                    ren.draw_shaded_mesh(last_mesh,textured_material,model_transform_matrix);
+                    ren.draw_shaded_mesh(last_mesh, textured_material, model_transform_matrix);
                 }
 
                 PngTexture new_texture(event.drop.data);
@@ -315,11 +330,11 @@ int main(int argc, char *argv[])
 
                     if (last_mesh.is_valid() && last_texture.is_valid())
                     {
-                        ren.draw_shaded_mesh(last_mesh,textured_material,model_transform_matrix);
+                        ren.draw_shaded_mesh(last_mesh, textured_material, model_transform_matrix);
                     }
                     else
                     {
-                        ren.draw_texture(last_texture,glm::ivec2(0,0));
+                        ren.draw_texture(last_texture, glm::ivec2(0, 0));
                     }
                 }
 
@@ -331,9 +346,16 @@ int main(int argc, char *argv[])
         {
             ren.frame_buffer->clear_color = TSRPA::Palette::INVISIBLE;
             ren.clear();
+
+            ren.zbuffer->set_deeph_mode(TSRPA::DeephMode::LESS);
+
             model_transform_matrix = glm::rotate(model_transform_matrix, (float)(glm::radians(90.0f) * delta_time), glm::vec3(0.0f, 1.0f, 0.0f));
+            ren.draw_shaded_mesh(last_mesh, textured_material, model_transform_matrix);
+
+            ren.zbuffer->set_deeph_mode(TSRPA::DeephMode::NONE);
+
             model_transparent_transform_matrix = glm::rotate(model_transparent_transform_matrix, (float)(glm::radians(90.0f) * delta_time), glm::vec3(0.0f, 1.0f, 0.0f));
-            ren.draw_shaded_mesh(last_mesh,textured_material,model_transform_matrix);
+            ren.draw_shaded_mesh(last_mesh, transparent_material, model_transparent_transform_matrix);
         }
 
         // Do game logic, present a frame, etc.

@@ -131,7 +131,6 @@ namespace TSRPA
 
         virtual void get_vertex_data(ShaderFunctionData &data, const unsigned int &id)
         {
-            
         }
     };
 
@@ -482,7 +481,6 @@ namespace TSRPA
             {
 
                 mesh.get_vertex_data(vertex_data[i], (face_id * 3) + i);
-                
             }
 
             if (face_mode == ShowFaces::FRONT)
@@ -492,7 +490,7 @@ namespace TSRPA
                 points[0] = transform * glm::vec4(vertex_data[0].position, 1.0);
                 points[1] = transform * glm::vec4(vertex_data[1].position, 1.0);
                 points[2] = transform * glm::vec4(vertex_data[2].position, 1.0);
-                
+
                 glm::vec3 cameraPosition = glm::inverse(view_matrix)[3];
                 glm::vec3 edge1 = points[1] - points[0];
                 glm::vec3 edge2 = points[2] - points[0];
@@ -509,7 +507,7 @@ namespace TSRPA
                 points[0] = transform * glm::vec4(vertex_data[0].position, 1.0);
                 points[1] = transform * glm::vec4(vertex_data[1].position, 1.0);
                 points[2] = transform * glm::vec4(vertex_data[2].position, 1.0);
-                
+
                 glm::vec3 cameraPosition = glm::inverse(view_matrix)[3];
                 glm::vec3 edge1 = points[1] - points[0];
                 glm::vec3 edge2 = points[2] - points[0];
@@ -530,7 +528,7 @@ namespace TSRPA
             {
 
                 vertex_data[i].normal = glm::normalize(normal_matrix * vertex_data[i].normal);
-                
+
                 material.vertex_shader(vertex_data[i]);
                 points[i] = calculate_screen_position(vertex_data[i].position, transform);
 
@@ -569,8 +567,23 @@ namespace TSRPA
                             fragment_data.color += vertex_data[i].color * bc_screen[i];
                         }
                         fragment_data.normal = glm::normalize(fragment_data.normal);
+                        glm::vec4 fragment_color = material.fragment_shader(fragment_data);
 
-                        draw_point(P.x, P.y, material.fragment_shader(fragment_data) * glm::vec4(255, 255, 255, 255));
+                        if (fragment_color.a < 1.0)
+                        {
+                            glm::vec4 fragment_color_no_alpha = fragment_color;
+                            fragment_color_no_alpha.a = 1.0;
+                            glm::vec4 framebuffer_color = ((glm::vec4)frame_buffer->get_color(P.x, P.y)) / glm::vec4(255.0, 255.0, 255.0, 255.0);
+                            draw_point(P.x, P.y, glm::mix(framebuffer_color, fragment_color_no_alpha, fragment_color.a) * glm::vec4(255, 255, 255, 255));
+                            //draw_point(P.x, P.y, fragment_color);
+                        }
+                        else if(fragment_color.a == 0){
+                            continue;
+                        }
+                        else{
+                            draw_point(P.x, P.y, fragment_color * glm::vec4(255, 255, 255, 255));
+                        }
+                        
                     }
                 }
             }
