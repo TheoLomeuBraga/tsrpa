@@ -13,6 +13,9 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
+// #define GLM_FORCE_SSE2 // or GLM_FORCE_SSE42 if your processor supports it
+// #define GLM_FORCE_ALIGNED
+
 class PngTexture : public TSRPA::Texture
 {
 public:
@@ -118,16 +121,14 @@ public:
                     {
                         this->uv.push_back(glm::vec2(
                             attrib.texcoords[2 * size_t(idx.texcoord_index) + 0],
-                            attrib.texcoords[2 * size_t(idx.texcoord_index) + 1]
-                        ));
+                            attrib.texcoords[2 * size_t(idx.texcoord_index) + 1]));
                     }
 
                     // Optional: vertex colors
                     this->color.push_back(glm::vec3(
                         attrib.colors[3 * size_t(idx.vertex_index) + 0],
                         attrib.colors[3 * size_t(idx.vertex_index) + 1],
-                        attrib.colors[3 * size_t(idx.vertex_index) + 2]
-                    ));
+                        attrib.colors[3 * size_t(idx.vertex_index) + 2]));
                 }
                 index_offset += fv;
 
@@ -159,30 +160,30 @@ void render_texture(TSRPA::Renderer &ren, TSRPA::Texture &texture)
 }
 
 glm::mat4 model_transform_matrix;
-void render_model_triangles_with_deeph_and_light(TSRPA::Renderer &ren, const TSRPA::Mesh &mesh, const glm::vec3 &light_rit)
-{
 
-    ren.zbuffer->set_deeph_mode(TSRPA::DeephMode::LESS);
-
-    for (unsigned int i = 0; i < mesh.vert_count; i += 3)
+void render_model_triangles_with_deeph_and_texture(TSRPA::Renderer &ren, TSRPA::Mesh &mesh){
+    for (unsigned int i = 0; i < mesh.face_count; i++)
     {
 
-        glm::vec3 points[3];
-
-        points[0] = ren.calculate_screen_position(mesh.vertex[i], model_transform_matrix);
-        points[1] = ren.calculate_screen_position(mesh.vertex[i+1], model_transform_matrix);
-        points[2] = ren.calculate_screen_position(mesh.vertex[i+2], model_transform_matrix);
-
-        glm::vec3 n = glm::normalize(glm::cross(points[2] - points[0], points[1] - points[0]));
-        float intensity = glm::dot(n, light_rit);
-        if (intensity < 0.0)
-        {
-            continue;
-        }
-
-        ren.draw_colorfull_triangle(points, glm::ivec4(intensity * 255, intensity * 255, intensity * 255, 255));
+        TSRPA::Material material;
+        ren.draw_shaded_triangle(mesh, i, material, model_transform_matrix);
     }
 }
+
+class TexturedMaterial : public TSRPA::Material
+{
+public:
+    TSRPA::Texture *texture;
+
+    glm::vec4 textured_fragment(TSRPA::ShaderFunctionData &data)
+    {
+        return texture->sample(data.uv);
+    }
+    TexturedMaterial() : TSRPA::Material()
+    {
+        fragment_shader = std::bind(&TexturedMaterial::textured_fragment, this, std::placeholders::_1);
+    }
+};
 
 void render_model_triangles_with_deeph_and_texture(TSRPA::Renderer &ren, TSRPA::Mesh &mesh, TSRPA::Texture &texture)
 {
@@ -190,23 +191,9 @@ void render_model_triangles_with_deeph_and_texture(TSRPA::Renderer &ren, TSRPA::
     for (unsigned int i = 0; i < mesh.face_count; i++)
     {
 
-        /*
-
-        glm::vec3 points[3];
-
-        points[0] = ren.calculate_screen_position(mesh.vertex[i], model_transform_matrix);
-        points[1] = ren.calculate_screen_position(mesh.vertex[i+1], model_transform_matrix);
-        points[2] = ren.calculate_screen_position(mesh.vertex[i+2], model_transform_matrix);
-
-        glm::vec2 uv[3];
-        uv[0] = mesh.uv[i];
-        uv[1] = mesh.uv[i+1];
-        uv[2] = mesh.uv[i+2];
-        
-        ren.draw_textured_triangle(points, uv, TSRPA::Palette::WHITE, texture);
-        */
-       TSRPA::Material material;
-       ren.draw_shaded_triangle(mesh,i,material,model_transform_matrix);
+        TexturedMaterial material;
+        material.texture = &texture;
+        ren.draw_shaded_triangle(mesh, i, material, model_transform_matrix);
     }
 }
 
@@ -350,7 +337,7 @@ int main(int argc, char *argv[])
                 if (new_mesh.is_valid())
                 {
                     last_mesh = new_mesh;
-                    render_model_triangles_with_deeph_and_light(ren, last_mesh, glm::vec3(0, 0, -1));
+                    render_model_triangles_with_deeph_and_texture(ren, last_mesh);
                 }
 
                 PngTexture new_texture(event.drop.data);

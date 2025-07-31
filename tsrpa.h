@@ -69,9 +69,9 @@ namespace TSRPA
             return glm::ivec4(data[i], data[i + 1], data[i + 2], data[i + 3]);
         }
 
-        glm::ivec4 get_sample(glm::vec2 uv)
+        glm::vec4 sample(glm::vec2 uv)
         {
-            return get_color(uv.x * width, height - (uv.y * height));
+            return (glm::vec4)(get_color(uv.x * width, height - (uv.y * height))) / glm::vec4(255.0,255.0,255.0,255.0);
         }
 
         void set_color(const unsigned int &x, const unsigned int &y, const glm::ivec4 &color)
@@ -84,35 +84,37 @@ namespace TSRPA
         }
     };
 
-    struct VestexShaderData
+    struct ShaderFunctionData
     {
-        glm::vec3 position;
-        glm::vec2 uv;
-        glm::vec2 uv2;
-        glm::vec3 normal;
-        glm::vec3 color;
+        glm::vec3 position = glm::vec3(0.0,0.0,0.0);
+        glm::vec2 uv = glm::vec2(0.0,0.0);
+        glm::vec2 uv2 = glm::vec2(0.0,0.0);
+        glm::vec3 normal = glm::vec3(0.0,0.0,0.0);
+        glm::vec3 color = glm::vec3(0.0,0.0,0.0);
 
-        int bone_index;
-        float bone_weight[4];
-    };
-
-    struct FragmentShaderData
-    {
+        int bone_index[4] = {0,0,0,0};
+        float bone_weight[4] = {0.0,0.0,0.0,0.0};
     };
 
     class Material
     {
     public:
-        std::function<void(VestexShaderData &)> vertex_shader;
-        std::function<void(FragmentShaderData &)> fragment_shader;
+        std::function<void(ShaderFunctionData &)> vertex_shader;
+        std::function<glm::vec4(ShaderFunctionData &)> fragment_shader;
 
-        void basic_vertex_shader(VestexShaderData &data)
+        void basic_vertex_shader(ShaderFunctionData &data)
         {
+        }
+
+        glm::vec4 basic_fragment_shader(ShaderFunctionData &data)
+        {
+            return glm::vec4(1.0, 1.0, 1.0, 1.0);
         }
 
         Material()
         {
             vertex_shader = std::bind(&Material::basic_vertex_shader, this, std::placeholders::_1);
+            fragment_shader = std::bind(&Material::basic_fragment_shader, this, std::placeholders::_1);
         }
     };
 
@@ -144,7 +146,7 @@ namespace TSRPA
         Mesh() {}
         bool is_valid() { return vert_count > 0; }
 
-        void get_vertex_data(VestexShaderData &data, const unsigned int &id)
+        void get_vertex_data(ShaderFunctionData &data, const unsigned int &id)
         {
             data.position = vertex[id];
             if (uv.size() > 0)
@@ -165,7 +167,10 @@ namespace TSRPA
             }
             if (bone_index.size() > 0)
             {
-                data.bone_index = bone_index[id];
+                for (unsigned char i = 0; i < std::min(4u, bone_influence_per_vertex); i++)
+                {
+                    data.bone_index[0] = bone_index[(bone_influence_per_vertex * id) + 0];
+                }
             }
             if (bone_weight.size() > 0)
             {
@@ -438,105 +443,20 @@ namespace TSRPA
             return glm::vec3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
         }
 
-        void draw_colorfull_triangle(const glm::vec3 *points, const glm::ivec4 &color)
-        {
-            glm::ivec2 bboxmin(width - 1, height - 1);
-            glm::ivec2 bboxmax(0, 0);
-            glm::ivec2 clamp(width - 1, height - 1);
-            for (int i = 0; i < 3; i++)
-            {
-                bboxmin.x = std::max(0, (int)std::min(bboxmin.x, (int)points[i].x));
-                bboxmin.y = std::max(0, (int)std::min(bboxmin.y, (int)points[i].y));
-
-                bboxmax.x = std::min(clamp.x, std::max(bboxmax.x, (int)points[i].x));
-                bboxmax.y = std::min(clamp.y, std::max(bboxmax.y, (int)points[i].y));
-            }
-            glm::vec3 P;
-            for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++)
-            {
-                for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
-                {
-                    glm::vec3 bc_screen = barycentric(points, P);
-                    if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
-                    {
-                        continue;
-                    }
-
-                    P.z = 0;
-                    for (int i = 0; i < 3; i++)
-                    {
-                        P.z += points[i][2] * bc_screen[i];
-                    }
-
-                    if (zbuffer->calculate_deep_check(int(P.x + P.y * width), P.z))
-                    {
-                        draw_point(P.x, P.y, color);
-                    }
-                }
-            }
-        }
-
-        void draw_textured_triangle(const glm::vec3 *points, const glm::vec2 *uv, const glm::ivec4 &color, TSRPA::Texture &texture)
-        {
-            glm::ivec2 bboxmin(width - 1, height - 1);
-            glm::ivec2 bboxmax(0, 0);
-            glm::ivec2 clamp(width - 1, height - 1);
-            for (int i = 0; i < 3; i++)
-            {
-                bboxmin.x = std::max(0, (int)std::min(bboxmin.x, (int)points[i].x));
-                bboxmin.y = std::max(0, (int)std::min(bboxmin.y, (int)points[i].y));
-
-                bboxmax.x = std::min(clamp.x, std::max(bboxmax.x, (int)points[i].x));
-                bboxmax.y = std::min(clamp.y, std::max(bboxmax.y, (int)points[i].y));
-            }
-            glm::vec3 P;
-            for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++)
-            {
-                for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
-                {
-                    glm::vec3 bc_screen = barycentric(points, P);
-                    if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
-                    {
-                        continue;
-                    }
-
-                    P.z = 0;
-                    for (int i = 0; i < 3; i++)
-                    {
-                        P.z += points[i][2] * bc_screen[i];
-                    }
-                    if (zbuffer->calculate_deep_check(int(P.x + P.y * width), P.z))
-                    {
-                        glm::vec2 uv_cord(0.0, 0.0);
-                        for (int i = 0; i < 3; i++)
-                        {
-                            uv_cord += uv[i] * bc_screen[i];
-                        }
-
-                        glm::ivec4 texture_color = texture.get_sample(uv_cord);
-                        glm::vec4 glm_texture_color(texture_color.r / 255.0, texture_color.g / 255.0, texture_color.b / 255.0, texture_color.a / 255.0);
-                        glm::vec4 glm_alpha_color(color.r / 255.0, color.g / 255.0, color.b / 255.0, color.a / 255.0);
-                        glm::vec4 glm_final_color = glm_alpha_color * glm_texture_color;
-
-                        draw_point(P.x, P.y, create_color(glm_final_color.r, glm_final_color.g, glm_final_color.b, glm_final_color.a));
-                    }
-                }
-            }
-        }
-
+        
         void draw_shaded_triangle(Mesh &mesh, const unsigned int face_id, Material &material, const glm::mat4 &transform)
         {
             glm::ivec2 bboxmin(width - 1, height - 1);
             glm::ivec2 bboxmax(0, 0);
             glm::ivec2 clamp(width - 1, height - 1);
             glm::vec3 points[3];
-            struct VestexShaderData vertex_data[3];
+            ShaderFunctionData vertex_data[3];
             for (int i = 0; i < 3; i++)
             {
 
-                mesh.get_vertex_data(vertex_data[i],(face_id * 3) + i);
+                mesh.get_vertex_data(vertex_data[i], (face_id * 3) + i);
                 material.vertex_shader(vertex_data[i]);
-                points[i] = calculate_screen_position(vertex_data[i].position,transform);
+                points[i] = calculate_screen_position(vertex_data[i].position, transform);
 
                 bboxmin.x = std::max(0, (int)std::min(bboxmin.x, (int)points[i].x));
                 bboxmin.y = std::max(0, (int)std::min(bboxmin.y, (int)points[i].y));
@@ -563,21 +483,18 @@ namespace TSRPA
                     if (zbuffer->calculate_deep_check(int(P.x + P.y * width), P.z))
                     {
 
-                        /*
-                        glm::vec2 uv_cord(0.0, 0.0);
+                        ShaderFunctionData fragment_data;
                         for (int i = 0; i < 3; i++)
                         {
-                            uv_cord += uv[i] * bc_screen[i];
+                            fragment_data.position += vertex_data[i].position * bc_screen[i];
+                            fragment_data.uv += vertex_data[i].uv * bc_screen[i];
+                            fragment_data.uv2 += vertex_data[i].uv2 * bc_screen[i];
+                            fragment_data.normal += vertex_data[i].normal * bc_screen[i];
+                            fragment_data.color += vertex_data[i].color * bc_screen[i];
+                            
                         }
 
-                        glm::ivec4 texture_color = texture.get_sample(uv_cord);
-                        glm::vec4 glm_texture_color(texture_color.r / 255.0, texture_color.g / 255.0, texture_color.b / 255.0, texture_color.a / 255.0);
-                        glm::vec4 glm_alpha_color(color.r / 255.0, color.g / 255.0, color.b / 255.0, color.a / 255.0);
-                        glm::vec4 glm_final_color = glm_alpha_color * glm_texture_color;
-                        */
-
-                        //draw_point(P.x, P.y, create_color(glm_final_color.r, glm_final_color.g, glm_final_color.b, glm_final_color.a));
-                        draw_point(P.x, P.y, create_color(1.0,1.0,1.0,1.0));
+                        draw_point(P.x, P.y, material.fragment_shader(fragment_data) * glm::vec4(255, 255, 255, 255));
                     }
                 }
             }
