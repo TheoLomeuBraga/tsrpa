@@ -222,6 +222,7 @@ namespace TSRPA
         unsigned int width;
         unsigned int height;
         std::vector<float> data;
+        bool write = true;
 
     private:
         DeephMode mode;
@@ -232,7 +233,11 @@ namespace TSRPA
         {
             if (data[idx] < value)
             {
-                data[idx] = value;
+                if (write)
+                {
+                    data[idx] = value;
+                }
+
                 return true;
             }
             return false;
@@ -241,7 +246,10 @@ namespace TSRPA
         {
             if (data[idx] > value)
             {
-                data[idx] = value;
+                if (write)
+                {
+                    data[idx] = value;
+                }
                 return true;
             }
             return false;
@@ -575,15 +583,15 @@ namespace TSRPA
                             fragment_color_no_alpha.a = 1.0;
                             glm::vec4 framebuffer_color = ((glm::vec4)frame_buffer->get_color(P.x, P.y)) / glm::vec4(255.0, 255.0, 255.0, 255.0);
                             draw_point(P.x, P.y, glm::mix(framebuffer_color, fragment_color_no_alpha, fragment_color.a) * glm::vec4(255, 255, 255, 255));
-                            //draw_point(P.x, P.y, fragment_color);
                         }
-                        else if(fragment_color.a == 0){
+                        else if (fragment_color.a == 0)
+                        {
                             continue;
                         }
-                        else{
+                        else
+                        {
                             draw_point(P.x, P.y, fragment_color * glm::vec4(255, 255, 255, 255));
                         }
-                        
                     }
                 }
             }
