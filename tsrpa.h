@@ -86,7 +86,7 @@ namespace TSRPA
 
     struct ShaderFunctionData
     {
-        glm::vec3 position = glm::vec3(0.0, 0.0, 0.0);
+        glm::vec4 position = glm::vec4(0.0, 0.0, 0.0, 1.0);
         glm::vec2 uv = glm::vec2(0.0, 0.0);
         glm::vec2 uv2 = glm::vec2(0.0, 0.0);
         glm::vec3 normal = glm::vec3(0.0, 0.0, 0.0);
@@ -94,13 +94,17 @@ namespace TSRPA
 
         int bone_index[4] = {0, 0, 0, 0};
         float bone_weight[4] = {0.0, 0.0, 0.0, 0.0};
+        glm::mat4 finalBonesMatrices[4];
+
     };
 
     class Material
     {
     public:
-        virtual void vertex_shader(ShaderFunctionData &data)
+        virtual void vertex_shader(ShaderFunctionData &data,const glm::mat4 &projection,const glm::mat4 &view,const glm::mat4 &model,const glm::mat3 &normal_matrix)
         {
+            data.normal = glm::normalize(normal_matrix * data.normal);
+            data.position = (projection * view * model) * data.position;
         }
 
         virtual glm::vec4 fragment_shader(ShaderFunctionData &data)
@@ -109,14 +113,6 @@ namespace TSRPA
         }
 
         Material() {}
-    };
-
-    struct VertexIndex
-    {
-        int vertex_index;
-        int uv_index[2];
-        int normal_index;
-        int color_index;
     };
 
     class MeshBase
@@ -145,15 +141,11 @@ namespace TSRPA
         std::vector<std::shared_ptr<Material>> materials;
         std::vector<int> material_idx;
 
-        unsigned int bone_influence_per_vertex = 4;
-        std::vector<int> bone_index;
-        std::vector<float> bone_weight;
-
         Mesh() : MeshBase() {}
 
         void get_vertex_data(ShaderFunctionData &data, const unsigned int &id)
         {
-            data.position = vertex[id];
+            data.position = glm::vec4(vertex[id],1.0);
             if (uv.size() > 0)
             {
                 data.uv = uv[id];
@@ -169,20 +161,6 @@ namespace TSRPA
             if (color.size() > 0)
             {
                 data.color = color[id];
-            }
-            if (bone_index.size() > 0)
-            {
-                for (unsigned char i = 0; i < std::min(4u, bone_influence_per_vertex); i++)
-                {
-                    data.bone_index[0] = bone_index[(bone_influence_per_vertex * id) + 0];
-                }
-            }
-            if (bone_weight.size() > 0)
-            {
-                for (unsigned char i = 0; i < std::min(4u, bone_influence_per_vertex); i++)
-                {
-                    data.bone_weight[0] = bone_weight[(bone_influence_per_vertex * id) + 0];
-                }
             }
         }
     };
@@ -470,6 +448,26 @@ namespace TSRPA
             return screenSpacePos;
         }
 
+        glm::vec3 calculate_screen_position_from_plane(const glm::vec4 &pos)
+        {
+
+            glm::vec4 clip_space_pos = pos;
+
+            glm::vec3 space_pos;
+            space_pos.x = clip_space_pos.x / clip_space_pos.w;
+            space_pos.y = clip_space_pos.y / clip_space_pos.w;
+            space_pos.z = clip_space_pos.z / clip_space_pos.w;
+
+            glm::vec3 screenSpacePos;
+            screenSpacePos.x = (space_pos.x + 1.0f) * 0.5f * width;
+            screenSpacePos.y = (1.0f - space_pos.y) * 0.5f * height;
+            screenSpacePos.z = 1.0f - space_pos.z;
+
+            return screenSpacePos;
+        }
+
+        
+
         glm::vec3 barycentric(const glm::vec3 *pts, const glm::vec3 &P)
         {
             glm::vec3 u = glm::cross(glm::vec3(pts[2][0] - pts[0][0], pts[1][0] - pts[0][0], pts[0][0] - P[0]), glm::vec3(pts[2][1] - pts[0][1], pts[1][1] - pts[0][1], pts[0][1] - P[1]));
@@ -495,9 +493,9 @@ namespace TSRPA
             {
 
                 glm::vec3 points[3];
-                points[0] = transform * glm::vec4(vertex_data[0].position, 1.0);
-                points[1] = transform * glm::vec4(vertex_data[1].position, 1.0);
-                points[2] = transform * glm::vec4(vertex_data[2].position, 1.0);
+                points[0] = transform * vertex_data[0].position;
+                points[1] = transform * vertex_data[1].position;
+                points[2] = transform * vertex_data[2].position;
 
                 glm::vec3 cameraPosition = glm::inverse(view_matrix)[3];
                 glm::vec3 edge1 = points[1] - points[0];
@@ -512,9 +510,9 @@ namespace TSRPA
             else if (face_mode == ShowFaces::BACK)
             {
                 glm::vec3 points[3];
-                points[0] = transform * glm::vec4(vertex_data[0].position, 1.0);
-                points[1] = transform * glm::vec4(vertex_data[1].position, 1.0);
-                points[2] = transform * glm::vec4(vertex_data[2].position, 1.0);
+                points[0] = transform * vertex_data[0].position;
+                points[1] = transform * vertex_data[1].position;
+                points[2] = transform * vertex_data[2].position;
 
                 glm::vec3 cameraPosition = glm::inverse(view_matrix)[3];
                 glm::vec3 edge1 = points[1] - points[0];
@@ -535,10 +533,11 @@ namespace TSRPA
             for (int i = 0; i < 3; i++)
             {
 
-                vertex_data[i].normal = glm::normalize(normal_matrix * vertex_data[i].normal);
+                //vertex_data[i].normal = glm::normalize(normal_matrix * vertex_data[i].normal);
 
-                material.vertex_shader(vertex_data[i]);
-                points[i] = calculate_screen_position(vertex_data[i].position, transform);
+                material.vertex_shader(vertex_data[i],projection_matrix,view_matrix,transform,normal_matrix);
+                //points[i] = calculate_screen_position(vertex_data[i].position, transform);
+                points[i] = calculate_screen_position_from_plane(vertex_data[i].position);
 
                 bboxmin.x = std::max(0, (int)std::min(bboxmin.x, (int)points[i].x));
                 bboxmin.y = std::max(0, (int)std::min(bboxmin.y, (int)points[i].y));

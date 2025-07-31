@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
     glm::vec3 model_pos(0.0f, 0.0f, 5.0f);
     model_transform_matrix = glm::translate(glm::mat4(1.0f), model_pos);
     model_transparent_transform_matrix = glm::translate(glm::mat4(1.0f), model_pos);
-    model_transparent_transform_matrix = glm::scale(model_transparent_transform_matrix, glm::vec3(1.5, 1.5, 1.5));
+    model_transparent_transform_matrix = glm::scale(model_transparent_transform_matrix, glm::vec3(1.2, 1.2, 1.2));
 
     transparent_material.color = glm::vec4(0.5, 0.5, 1.0, 0.2);
 
