@@ -1,4 +1,6 @@
-tsrpa stands for: Théo software render patetic atempt
+tsrpa stands for: Théo software renderer patetic atempt
+
+a patetic atempt to create a single header software renderer
 
 my compile comand
 ```bash```
