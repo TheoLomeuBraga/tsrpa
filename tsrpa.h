@@ -119,11 +119,25 @@ namespace TSRPA
         int color_index;
     };
 
-    class Mesh
+    class MeshBase
     {
     public:
         unsigned int vert_count;
         unsigned int face_count;
+
+        MeshBase() {}
+
+        virtual bool is_valid() { return vert_count > 0; }
+
+        virtual void get_vertex_data(ShaderFunctionData &data, const unsigned int &id)
+        {
+            
+        }
+    };
+
+    class Mesh : public MeshBase
+    {
+    public:
         std::vector<glm::vec3> vertex;
         std::vector<glm::vec2> uv;
         std::vector<glm::vec2> uv2;
@@ -136,8 +150,7 @@ namespace TSRPA
         std::vector<int> bone_index;
         std::vector<float> bone_weight;
 
-        Mesh() {}
-        bool is_valid() { return vert_count > 0; }
+        Mesh() : MeshBase() {}
 
         void get_vertex_data(ShaderFunctionData &data, const unsigned int &id)
         {
@@ -460,7 +473,7 @@ namespace TSRPA
             return glm::vec3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
         }
 
-        void draw_shaded_triangle(Mesh &mesh, const unsigned int face_id, Material &material, const glm::mat4 &transform, const glm::mat3 &normal_matrix)
+        void draw_shaded_triangle(MeshBase &mesh, const unsigned int face_id, Material &material, const glm::mat4 &transform, const glm::mat3 &normal_matrix)
         {
 
             ShaderFunctionData vertex_data[3];
@@ -563,7 +576,7 @@ namespace TSRPA
             }
         }
 
-        void draw_shaded_mesh(Mesh &mesh, Material &material, const glm::mat4 &transform)
+        void draw_shaded_mesh(MeshBase &mesh, Material &material, const glm::mat4 &transform)
         {
             glm::mat3 normal_matrix = glm::transpose(glm::inverse(glm::mat3(transform)));
             for (unsigned int i = 0; i < mesh.face_count; i++)

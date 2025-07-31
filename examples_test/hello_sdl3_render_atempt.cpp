@@ -147,6 +147,7 @@ PngTexture last_texture;
 
 
 glm::mat4 model_transform_matrix;
+glm::mat4 model_transparent_transform_matrix;
 
 class TexturedMaterial : public TSRPA::Material
 {
@@ -232,11 +233,6 @@ int main(int argc, char *argv[])
     ren.draw_point(0, 255, TSRPA::Palette::GREEN);
     ren.draw_point(255, 255, TSRPA::Palette::GREEN);
 
-    // ren.draw_line(glm::vec2(32, 32), glm::vec2(128, 128), TSRPA::Palette::RED);
-    ren.draw_line(glm::ivec2(0, 0), glm::vec2(0, 500), TSRPA::Palette::RED);
-    ren.draw_line(glm::ivec2(0, 0), glm::vec2(500, 0), TSRPA::Palette::RED);
-    ren.draw_line(glm::ivec2(0, 0), glm::vec2(500, 500), TSRPA::Palette::RED);
-
     const unsigned int pich = ren.width * 4;
 
     SDL_Surface *surface = SDL_CreateSurfaceFrom(ren.width, ren.height, SDL_PIXELFORMAT_RGBA32, (void *)ren.get_result(), pich);
@@ -246,6 +242,8 @@ int main(int argc, char *argv[])
 
     glm::vec3 model_pos(0.0f, 0.0f, 5.0f);
     model_transform_matrix = glm::translate(glm::mat4(1.0f), model_pos);
+    model_transparent_transform_matrix = glm::translate(glm::mat4(1.0f), model_pos);
+    model_transparent_transform_matrix = glm::scale(model_transparent_transform_matrix,glm::vec3(1.5,1.5,1.5));
 
     ren.view_matrix = glm::lookAt(
         glm::vec3(0.0f, 0.0f, 0.0f),
@@ -334,6 +332,7 @@ int main(int argc, char *argv[])
             ren.frame_buffer->clear_color = TSRPA::Palette::INVISIBLE;
             ren.clear();
             model_transform_matrix = glm::rotate(model_transform_matrix, (float)(glm::radians(90.0f) * delta_time), glm::vec3(0.0f, 1.0f, 0.0f));
+            model_transparent_transform_matrix = glm::rotate(model_transparent_transform_matrix, (float)(glm::radians(90.0f) * delta_time), glm::vec3(0.0f, 1.0f, 0.0f));
             ren.draw_shaded_mesh(last_mesh,textured_material,model_transform_matrix);
         }
 
