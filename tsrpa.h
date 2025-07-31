@@ -99,7 +99,6 @@ namespace TSRPA
     class Material
     {
     public:
-
         virtual void vertex_shader(ShaderFunctionData &data)
         {
         }
@@ -109,7 +108,7 @@ namespace TSRPA
             return glm::vec4(1.0, 1.0, 1.0, 1.0);
         }
 
-        Material(){}
+        Material() {}
     };
 
     struct VertexIndex
