@@ -4,6 +4,7 @@
 #include <functional>
 #include <glm/glm.hpp>
 #include <vector>
+#include <memory>
 
 #ifndef MAX_BONE_INFLUENCE
 #define MAX_BONE_INFLUENCE 4
@@ -85,6 +86,14 @@ namespace TSRPA
 
     struct VestexShaderData
     {
+        glm::vec3 position;
+        glm::vec2 uv;
+        glm::vec2 uv2;
+        glm::vec3 normal;
+        glm::vec3 color;
+
+        int bone_index;
+        float bone_weight[4];
     };
 
     struct FragmentShaderData
@@ -94,9 +103,17 @@ namespace TSRPA
     class Material
     {
     public:
-        Material() {}
-        std::function<void(VestexShaderData*)> vertex_shader;
-        std::function<void(FragmentShaderData*)> fragment_shader;
+        std::function<void(VestexShaderData &)> vertex_shader;
+        std::function<void(FragmentShaderData &)> fragment_shader;
+
+        void basic_vertex_shader(VestexShaderData &data)
+        {
+        }
+
+        Material()
+        {
+            vertex_shader = std::bind(&Material::basic_vertex_shader, this, std::placeholders::_1);
+        }
     };
 
     struct VertexIndex
@@ -111,19 +128,53 @@ namespace TSRPA
     {
     public:
         unsigned int vert_count;
+        unsigned int face_count;
         std::vector<glm::vec3> vertex;
         std::vector<glm::vec2> uv;
         std::vector<glm::vec2> uv2;
         std::vector<glm::vec3> normal;
         std::vector<glm::vec3> color;
-        std::vector<Material> materials;
+        std::vector<std::shared_ptr<Material>> materials;
         std::vector<int> material_idx;
 
+        unsigned int bone_influence_per_vertex = 4;
         std::vector<int> bone_index;
         std::vector<float> bone_weight;
 
         Mesh() {}
         bool is_valid() { return vert_count > 0; }
+
+        void get_vertex_data(VestexShaderData &data, const unsigned int &id)
+        {
+            data.position = vertex[id];
+            if (uv.size() > 0)
+            {
+                data.uv = uv[id];
+            }
+            if (uv2.size() > 0)
+            {
+                data.uv2 = uv2[id];
+            }
+            if (normal.size() > 0)
+            {
+                data.normal = normal[id];
+            }
+            if (color.size() > 0)
+            {
+                data.color = color[id];
+            }
+            if (bone_index.size() > 0)
+            {
+                data.bone_index = bone_index[id];
+            }
+            if (bone_weight.size() > 0)
+            {
+                for (unsigned char i = 0; i < std::min(4u, bone_influence_per_vertex); i++)
+                {
+                    data.bone_weight[0] = bone_weight[(bone_influence_per_vertex * id) + 0];
+                }
+            }
+        }
     };
 
     class FrameBuffer : public Texture
@@ -468,6 +519,65 @@ namespace TSRPA
                         glm::vec4 glm_final_color = glm_alpha_color * glm_texture_color;
 
                         draw_point(P.x, P.y, create_color(glm_final_color.r, glm_final_color.g, glm_final_color.b, glm_final_color.a));
+                    }
+                }
+            }
+        }
+
+        void draw_shaded_triangle(Mesh &mesh, const unsigned int face_id, Material &material, const glm::mat4 &transform)
+        {
+            glm::ivec2 bboxmin(width - 1, height - 1);
+            glm::ivec2 bboxmax(0, 0);
+            glm::ivec2 clamp(width - 1, height - 1);
+            glm::vec3 points[3];
+            struct VestexShaderData vertex_data[3];
+            for (int i = 0; i < 3; i++)
+            {
+
+                mesh.get_vertex_data(vertex_data[i],(face_id * 3) + i);
+                material.vertex_shader(vertex_data[i]);
+                points[i] = calculate_screen_position(vertex_data[i].position,transform);
+
+                bboxmin.x = std::max(0, (int)std::min(bboxmin.x, (int)points[i].x));
+                bboxmin.y = std::max(0, (int)std::min(bboxmin.y, (int)points[i].y));
+
+                bboxmax.x = std::min(clamp.x, std::max(bboxmax.x, (int)points[i].x));
+                bboxmax.y = std::min(clamp.y, std::max(bboxmax.y, (int)points[i].y));
+            }
+            glm::vec3 P;
+            for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++)
+            {
+                for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
+                {
+                    glm::vec3 bc_screen = barycentric(points, P);
+                    if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
+                    {
+                        continue;
+                    }
+
+                    P.z = 0;
+                    for (int i = 0; i < 3; i++)
+                    {
+                        P.z += points[i][2] * bc_screen[i];
+                    }
+                    if (zbuffer->calculate_deep_check(int(P.x + P.y * width), P.z))
+                    {
+
+                        /*
+                        glm::vec2 uv_cord(0.0, 0.0);
+                        for (int i = 0; i < 3; i++)
+                        {
+                            uv_cord += uv[i] * bc_screen[i];
+                        }
+
+                        glm::ivec4 texture_color = texture.get_sample(uv_cord);
+                        glm::vec4 glm_texture_color(texture_color.r / 255.0, texture_color.g / 255.0, texture_color.b / 255.0, texture_color.a / 255.0);
+                        glm::vec4 glm_alpha_color(color.r / 255.0, color.g / 255.0, color.b / 255.0, color.a / 255.0);
+                        glm::vec4 glm_final_color = glm_alpha_color * glm_texture_color;
+                        */
+
+                        //draw_point(P.x, P.y, create_color(glm_final_color.r, glm_final_color.g, glm_final_color.b, glm_final_color.a));
+                        draw_point(P.x, P.y, create_color(1.0,1.0,1.0,1.0));
                     }
                 }
             }

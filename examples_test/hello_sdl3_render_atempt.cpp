@@ -136,6 +136,7 @@ public:
             }
         }
         this->vert_count = this->vertex.size();
+        this->face_count = this->vertex.size() / 3;
     }
 };
 
@@ -186,8 +187,10 @@ void render_model_triangles_with_deeph_and_light(TSRPA::Renderer &ren, const TSR
 void render_model_triangles_with_deeph_and_texture(TSRPA::Renderer &ren, TSRPA::Mesh &mesh, TSRPA::Texture &texture)
 {
 
-    for (unsigned int i = 0; i < mesh.vert_count; i += 3)
+    for (unsigned int i = 0; i < mesh.face_count; i++)
     {
+
+        /*
 
         glm::vec3 points[3];
 
@@ -199,9 +202,11 @@ void render_model_triangles_with_deeph_and_texture(TSRPA::Renderer &ren, TSRPA::
         uv[0] = mesh.uv[i];
         uv[1] = mesh.uv[i+1];
         uv[2] = mesh.uv[i+2];
-
-        // ren.draw_textured_triangle(points, uv, glm::ivec4(intensity * 255, intensity * 255, intensity * 255, 255), texture);
+        
         ren.draw_textured_triangle(points, uv, TSRPA::Palette::WHITE, texture);
+        */
+       TSRPA::Material material;
+       ren.draw_shaded_triangle(mesh,i,material,model_transform_matrix);
     }
 }
 
