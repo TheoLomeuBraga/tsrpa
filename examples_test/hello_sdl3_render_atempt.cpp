@@ -144,20 +144,7 @@ public:
 ObjMesh last_mesh;
 PngTexture last_texture;
 
-void render_texture(TSRPA::Renderer &ren, TSRPA::Texture &texture)
-{
-    if (texture.width == 0 || texture.height == 0)
-    {
-        return;
-    }
-    for (unsigned int x = 0; x < texture.width; x++)
-    {
-        for (unsigned int y = 0; y < texture.height; y++)
-        {
-            ren.draw_point(x, y, texture.get_color(x, y));
-        }
-    }
-}
+
 
 glm::mat4 model_transform_matrix;
 
@@ -334,7 +321,7 @@ int main(int argc, char *argv[])
                     }
                     else
                     {
-                        render_texture(ren, last_texture);
+                        ren.draw_texture(last_texture,glm::ivec2(0,0));
                     }
                 }
 

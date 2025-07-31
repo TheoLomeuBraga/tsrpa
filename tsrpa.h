@@ -339,6 +339,21 @@ namespace TSRPA
             return true;
         }
 
+        void draw_texture(TSRPA::Texture &texture, const glm::ivec2 &offset)
+        {
+            if (!texture.is_valid())
+            {
+                return;
+            }
+            for (unsigned int x = 0; x < std::min(texture.width, width + offset.x); x++)
+            {
+                for (unsigned int y = 0; y < std::min(texture.height, height + offset.y); y++)
+                {
+                    draw_point(x + offset.x, y + offset.y, texture.get_color(x, y));
+                }
+            }
+        }
+
         void draw_line(glm::ivec2 a, glm::ivec2 b, const glm::ivec4 &color)
         {
 
