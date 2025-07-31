@@ -153,14 +153,11 @@ class TexturedMaterial : public TSRPA::Material
 public:
     TSRPA::Texture *texture;
 
-    glm::vec4 textured_fragment(TSRPA::ShaderFunctionData &data)
+    glm::vec4 fragment_shader(TSRPA::ShaderFunctionData &data)
     {
         return texture->sample(data.uv);
     }
-    TexturedMaterial() : TSRPA::Material()
-    {
-        fragment_shader = std::bind(&TexturedMaterial::textured_fragment, this, std::placeholders::_1);
-    }
+    TexturedMaterial() : TSRPA::Material(){}
 };
 
 void print_mesage(SDL_Renderer *render, TTF_Font *font, const std::string &text)

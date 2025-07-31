@@ -99,23 +99,17 @@ namespace TSRPA
     class Material
     {
     public:
-        std::function<void(ShaderFunctionData &)> vertex_shader;
-        std::function<glm::vec4(ShaderFunctionData &)> fragment_shader;
 
-        void basic_vertex_shader(ShaderFunctionData &data)
+        virtual void vertex_shader(ShaderFunctionData &data)
         {
         }
 
-        glm::vec4 basic_fragment_shader(ShaderFunctionData &data)
+        virtual glm::vec4 fragment_shader(ShaderFunctionData &data)
         {
             return glm::vec4(1.0, 1.0, 1.0, 1.0);
         }
 
-        Material()
-        {
-            vertex_shader = std::bind(&Material::basic_vertex_shader, this, std::placeholders::_1);
-            fragment_shader = std::bind(&Material::basic_fragment_shader, this, std::placeholders::_1);
-        }
+        Material(){}
     };
 
     struct VertexIndex
