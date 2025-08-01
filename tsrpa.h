@@ -6,10 +6,6 @@
 #include <vector>
 #include <memory>
 
-#ifndef MAX_BONE_INFLUENCE
-#define MAX_BONE_INFLUENCE 4
-#endif
-
 namespace TSRPA
 {
 
