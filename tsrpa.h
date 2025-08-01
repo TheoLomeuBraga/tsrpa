@@ -4,7 +4,6 @@
 #include <functional>
 #include <glm/glm.hpp>
 #include <vector>
-#include <memory>
 
 namespace TSRPA
 {
@@ -133,7 +132,6 @@ namespace TSRPA
         std::vector<glm::vec2> uv2;
         std::vector<glm::vec3> normal;
         std::vector<glm::vec3> color;
-        std::vector<std::shared_ptr<Material>> materials;
         std::vector<int> material_idx;
 
         Mesh() : MeshBase() {}
