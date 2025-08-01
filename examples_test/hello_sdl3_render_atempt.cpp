@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
     textured_material.texture = &last_texture;
 
     TSRPA::Renderer ren(1024, 1024);
-    ren.frame_buffer->clear_color = TSRPA::Palette::INVISIBLE;
+    ren.set_clear_color(TSRPA::Palette::INVISIBLE);
     ren.clear();
 
     ren.draw_point(0, 0, TSRPA::Palette::GREEN);
@@ -246,9 +246,9 @@ int main(int argc, char *argv[])
     ren.draw_point(0, 255, TSRPA::Palette::GREEN);
     ren.draw_point(255, 255, TSRPA::Palette::GREEN);
 
-    const unsigned int pich = ren.width * 4;
+    const unsigned int pich = ren.get_width() * 4;
 
-    SDL_Surface *surface = SDL_CreateSurfaceFrom(ren.width, ren.height, SDL_PIXELFORMAT_RGBA32, (void *)ren.get_result(), pich);
+    SDL_Surface *surface = SDL_CreateSurfaceFrom(ren.get_width(), ren.get_height(), SDL_PIXELFORMAT_RGBA32, (void *)ren.get_result(), pich);
     SDL_Texture *texture = SDL_CreateTextureFromSurface(render, surface);
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
     SDL_DestroySurface(surface);
@@ -260,23 +260,23 @@ int main(int argc, char *argv[])
 
     transparent_material.color = glm::vec4(0.5, 0.5, 1.0, 0.2);
 
-    ren.view_matrix = glm::lookAt(
+    ren.set_view_matrix(glm::lookAt(
         glm::vec3(0.0f, 0.0f, 0.0f),
         model_pos,
-        glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::vec3(0.0f, 1.0f, 0.0f)));;
 
     // Matriz de Projeção
-    ren.projection_matrix = glm::perspective(
+    ren.set_projection_matrix(glm::perspective(
         glm::radians(45.0f),
-        float(ren.width) / float(ren.height),
+        float(ren.get_width()) / float(ren.get_height()),
         0.1f,
-        100.0f);
+        100.0f));
 
     unsigned int lastTime = 0, currentTime;
     double delta_time;
 
-    ren.zbuffer->set_deeph_mode(TSRPA::DeephMode::LESS);
-    ren.face_mode = TSRPA::FRONT;
+    ren.set_deeph_mode(TSRPA::DeephMode::LESS);
+    ren.set_face_mode(TSRPA::FRONT);
 
     std::string font_path = std::string(SDL_GetBasePath()) + "AlienCyborg.ttf";
 
@@ -312,7 +312,7 @@ int main(int argc, char *argv[])
                 break;
             case SDL_EVENT_DROP_FILE:
 
-                ren.frame_buffer->clear_color = TSRPA::Palette::BLACK;
+                ren.set_clear_color(TSRPA::Palette::BLACK);
                 ren.clear();
 
                 ObjMesh new_mesh(event.drop.data);
@@ -344,15 +344,15 @@ int main(int argc, char *argv[])
 
         if (last_mesh.is_valid() && last_texture.is_valid())
         {
-            ren.frame_buffer->clear_color = TSRPA::Palette::INVISIBLE;
+            ren.set_clear_color(TSRPA::Palette::INVISIBLE);
             ren.clear();
 
-            ren.zbuffer->set_deeph_mode(TSRPA::DeephMode::LESS);
+            ren.set_deeph_mode(TSRPA::DeephMode::LESS);
 
             model_transform_matrix = glm::rotate(model_transform_matrix, (float)(glm::radians(90.0f) * delta_time), glm::vec3(0.0f, 1.0f, 0.0f));
             ren.draw_shaded_mesh(last_mesh, textured_material, model_transform_matrix);
 
-            ren.zbuffer->set_deeph_mode(TSRPA::DeephMode::NONE);
+            ren.set_deeph_mode(TSRPA::DeephMode::NONE);
 
             model_transparent_transform_matrix = glm::rotate(model_transparent_transform_matrix, (float)(glm::radians(90.0f) * delta_time), glm::vec3(0.0f, 1.0f, 0.0f));
             ren.draw_shaded_mesh(last_mesh, transparent_material, model_transparent_transform_matrix);
