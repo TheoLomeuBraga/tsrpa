@@ -240,7 +240,8 @@ int main(int argc, char *argv[])
     TexturedMaterial textured_material;
     textured_material.texture = &last_texture;
 
-    TSRPA::Renderer ren(1024, 1024);
+    //TSRPA::Renderer ren(1024, 1024);
+    TSRPA::MultThreadRenderer ren(1024, 1024);
     ren.set_clear_color(TSRPA::Palette::INVISIBLE);
     ren.clear();
 

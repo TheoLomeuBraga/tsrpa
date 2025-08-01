@@ -179,7 +179,7 @@ namespace TSRPA
 
     class Renderer
     {
-    private:
+    protected:
         std::vector<unsigned char> frame_buffer;
 
         glm::ivec4 clear_color;
@@ -587,12 +587,103 @@ namespace TSRPA
     };
 
 #ifdef TSRPA_MULT_THREAD_RENDERER
-    class MultThreadRenderer : public Renderer
+
+    template <typename T>
+    class MutexLockedValue
     {
     private:
+        std::mutex mtx;
+        T value;
+
+    public:
+        T get() //const
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            return value;
+        }
+
+        void set(T new_value)
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            value = new_value;
+        }
+    };
+
+    class MultThreadRenderer : public Renderer
+    {
+    protected:
+        MutexLockedValue<bool> proceed;
+        
+        
+
+        void loop()
+        {
+            while (proceed.get())
+            {
+                
+            }
+        }
+
+        std::thread renderer_thread;
+
+        void set_clear_color_ptr(glm::ivec4 *color) { clear_color = *color; }
+
+        void set_face_mode_ptr(ShowFaces *mode) { face_mode = *mode; }
+
+        void set_view_matrix_ptr(glm::mat4 *mat) { view_matrix = *mat; }
+
+        void set_projection_matrix_ptr(glm::mat4 *mat) { projection_matrix = *mat; }
+
+        void set_zbuffer_write_ptr(bool *on) { zbuffer_write = *on; }
+
+        void set_deeph_mode_ptr(DeephMode *mode)
+        {
+            Renderer::set_deeph_mode(*mode);
+        }
+
+        glm::ivec4 frame_buffer_get_color_ptr(const unsigned int *x, const unsigned int *y)
+        {
+            return Renderer::frame_buffer_get_color(*x, *y);
+        }
+
+        bool draw_point_ptr(const unsigned int *x, const unsigned int *y, const glm::ivec4 *color)
+        {
+            return Renderer::draw_point(*x, *y, *color);
+        }
+
+        void draw_texture_ptr(TSRPA::Texture *texture, const glm::ivec2 *offset)
+        {
+            Renderer::draw_texture(*texture, *offset);
+        }
+
+        void draw_line_ptr(glm::ivec2 a, glm::ivec2 b, const glm::ivec4 *color)
+        {
+            Renderer::draw_line(a, b, *color);
+        }
+
+        void draw_triangle_wire_frame_ptr(const glm::ivec2 *a, const glm::ivec2 *b, const glm::ivec2 *c, const glm::ivec4 *color)
+        {
+            Renderer::draw_triangle_wire_frame(*a, *b, *c, *color);
+        }
+
+        void draw_basic_triangle_ptr(glm::ivec2 a, glm::ivec2 b, glm::ivec2 c, const glm::ivec4 *color)
+        {
+            Renderer::draw_basic_triangle(a, b, c, *color);
+        }
+
+        void draw_shaded_mesh_ptr(MeshBase *mesh, Material *material, glm::mat4 *transform)
+        {
+            Renderer::draw_shaded_mesh(*mesh, *material, *transform);
+        }
+
     public:
         MultThreadRenderer(unsigned int width, unsigned int height) : Renderer(width, height)
         {
+            renderer_thread = std::thread(&MultThreadRenderer::loop, this);
+        }
+        ~MultThreadRenderer(){
+            proceed.set(false);
+            renderer_thread.join();
         }
     };
 #endif
