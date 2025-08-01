@@ -7,11 +7,14 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#define TSRPA_MULT_THREAD_RENDERER
 #define TSRPA_ADD_BASIC_COLOR_PALETTE
 #include "tsrpa.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
+
+
 
 // #define GLM_FORCE_SSE2 // or GLM_FORCE_SSE42 if your processor supports it
 // #define GLM_FORCE_ALIGNED

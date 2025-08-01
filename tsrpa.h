@@ -5,6 +5,11 @@
 #include <glm/glm.hpp>
 #include <vector>
 
+#ifdef TSRPA_MULT_THREAD_RENDERER
+#include <thread>
+#include <mutex>
+#endif
+
 namespace TSRPA
 {
 
@@ -221,8 +226,10 @@ namespace TSRPA
         {
             return deep_check_func(idx, value);
         }
-        virtual void clear_zbuffer(){
-            for(unsigned int i = 0; i < zbuffer.size();i++){
+        virtual void clear_zbuffer()
+        {
+            for (unsigned int i = 0; i < zbuffer.size(); i++)
+            {
                 zbuffer[i] = 0;
             }
         }
@@ -569,7 +576,7 @@ namespace TSRPA
             }
         }
 
-        virtual void draw_shaded_mesh(MeshBase &mesh, Material &material, const glm::mat4 &transform)
+        virtual void draw_shaded_mesh(MeshBase &mesh, Material &material, glm::mat4 &transform)
         {
             glm::mat3 normal_matrix = glm::transpose(glm::inverse(glm::mat3(transform)));
             for (unsigned int i = 0; i < mesh.face_count; i++)
@@ -577,7 +584,16 @@ namespace TSRPA
                 draw_shaded_triangle(mesh, i, material, transform, normal_matrix);
             }
         }
-    
     };
 
+#ifdef TSRPA_MULT_THREAD_RENDERER
+    class MultThreadRenderer : public Renderer
+    {
+    private:
+    public:
+        MultThreadRenderer(unsigned int width, unsigned int height) : Renderer(width, height)
+        {
+        }
+    };
+#endif
 };
