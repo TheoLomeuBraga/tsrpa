@@ -8,6 +8,7 @@
 #ifdef TSRPA_MULT_THREAD_RENDERER
 #include <thread>
 #include <mutex>
+#include <chrono>
 #endif
 
 namespace TSRPA
@@ -596,16 +597,51 @@ namespace TSRPA
         T value;
 
     public:
-        T get() //const
+        T get() // const
         {
-            std::lock_guard<std::mutex> lock(mtx);
+            std::unique_lock<std::mutex> lock(mtx);
             return value;
         }
 
         void set(T new_value)
         {
-            std::lock_guard<std::mutex> lock(mtx);
+            std::unique_lock<std::mutex> lock(mtx);
             value = new_value;
+        }
+    };
+
+    class MultThreadRendererTaskList
+    {
+    private:
+        std::mutex mtx;
+        std::vector<std::function<void()>> list;
+
+    public:
+        void add_task(std::function<void()> task)
+        {
+            
+            std::unique_lock<std::mutex> lock(mtx);
+            list.push_back(task);
+        }
+        std::function<void()> get_task()
+        {
+            
+            std::unique_lock<std::mutex> lock(mtx);
+            std::function<void()> task = list[0];
+            list.erase(list.begin());
+            return task;
+        }
+        bool completed()
+        {
+            std::unique_lock<std::mutex> lock(mtx);
+            return list.size() == 0;
+        }
+        void wait_for_completion()
+        {
+            while (!completed())
+            {
+                std::this_thread::sleep_for(std::chrono::microseconds(10));
+            }
         }
     };
 
@@ -613,18 +649,33 @@ namespace TSRPA
     {
     protected:
         MutexLockedValue<bool> proceed;
-        
-        
+
+        MultThreadRendererTaskList task_list;
+
+        std::thread renderer_thread;
 
         void loop()
         {
             while (proceed.get())
             {
+                std::this_thread::sleep_for(std::chrono::microseconds(10));
+
+                if(task_list.completed()){
+                    continue;
+                }
+                task_list.get_task()();
                 
             }
         }
 
-        std::thread renderer_thread;
+        void start_render_thread(){
+            proceed.set(true);
+            renderer_thread = std::thread(&MultThreadRenderer::loop, this);
+        }
+
+        //reminder how use task_list
+        //task_list.add_task(std::bind(&printf, "A\n"));
+        //task_list.wait_for_completion();
 
         void set_clear_color_ptr(glm::ivec4 *color) { clear_color = *color; }
 
@@ -679,9 +730,12 @@ namespace TSRPA
     public:
         MultThreadRenderer(unsigned int width, unsigned int height) : Renderer(width, height)
         {
-            renderer_thread = std::thread(&MultThreadRenderer::loop, this);
+            
+            start_render_thread();
+            
         }
-        ~MultThreadRenderer(){
+        ~MultThreadRenderer()
+        {
             proceed.set(false);
             renderer_thread.join();
         }
