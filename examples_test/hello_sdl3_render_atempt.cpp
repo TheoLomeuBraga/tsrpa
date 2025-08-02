@@ -163,6 +163,7 @@ public:
     }
     TexturedMaterial() : TSRPA::Material() {}
 };
+TexturedMaterial textured_material;
 
 class TransparentMaterial : public TSRPA::Material
 {
@@ -237,11 +238,11 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    TexturedMaterial textured_material;
+    
     textured_material.texture = &last_texture;
 
-    //TSRPA::Renderer ren(1024, 1024);
-    TSRPA::MultThreadRenderer ren(1024, 1024);
+    TSRPA::Renderer ren(1024, 1024);
+    //TSRPA::MultThreadRenderer ren(1024, 1024);
     ren.set_clear_color(TSRPA::Palette::INVISIBLE);
     ren.clear();
 
@@ -252,7 +253,9 @@ int main(int argc, char *argv[])
 
     const unsigned int pich = ren.get_width() * 4;
 
+    printf("i will get the result\n");
     SDL_Surface *surface = SDL_CreateSurfaceFrom(ren.get_width(), ren.get_height(), SDL_PIXELFORMAT_RGBA32, (void *)ren.get_result(), pich);
+    printf("i get the result\n");
     SDL_Texture *texture = SDL_CreateTextureFromSurface(render, surface);
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
     SDL_DestroySurface(surface);
@@ -278,7 +281,8 @@ int main(int argc, char *argv[])
 
     unsigned int lastTime = 0, currentTime;
     double delta_time;
-
+    
+    
     ren.set_deeph_mode(TSRPA::DeephMode::LESS);
     ren.set_face_mode(TSRPA::FRONT);
 
@@ -297,6 +301,11 @@ int main(int argc, char *argv[])
 
     while (!done)
     {
+
+        //get the result before process "game logic"
+        SDL_RenderClear(render);
+        SDL_UpdateTexture(texture, NULL, (void *)ren.get_result(), pich);
+        SDL_RenderTexture(render, texture, NULL, NULL);
 
         currentTime = SDL_GetTicks();
         delta_time = (double)((currentTime - lastTime) * 1000 / (double)SDL_GetPerformanceFrequency()) * 1000;
@@ -322,9 +331,11 @@ int main(int argc, char *argv[])
                 ObjMesh new_mesh(event.drop.data);
                 if (new_mesh.is_valid())
                 {
+                    
                     last_mesh = new_mesh;
-                    TSRPA::Material material;
+                    
                     ren.draw_shaded_mesh(last_mesh, textured_material, model_transform_matrix);
+                    
                 }
 
                 PngTexture new_texture(event.drop.data);
@@ -348,24 +359,26 @@ int main(int argc, char *argv[])
 
         if (last_mesh.is_valid() && last_texture.is_valid())
         {
+            
             ren.set_clear_color(TSRPA::Palette::INVISIBLE);
             ren.clear();
 
+            ren.set_zbuffer_write(true);
             ren.set_deeph_mode(TSRPA::DeephMode::LESS);
 
             model_transform_matrix = glm::rotate(model_transform_matrix, (float)(glm::radians(90.0f) * delta_time), glm::vec3(0.0f, 1.0f, 0.0f));
             ren.draw_shaded_mesh(last_mesh, textured_material, model_transform_matrix);
+            
 
-            ren.set_deeph_mode(TSRPA::DeephMode::NONE);
+            ren.set_zbuffer_write(false);
+            ren.set_deeph_mode(TSRPA::DeephMode::LESS);
 
             model_transparent_transform_matrix = glm::rotate(model_transparent_transform_matrix, (float)(glm::radians(90.0f) * delta_time), glm::vec3(0.0f, 1.0f, 0.0f));
             ren.draw_shaded_mesh(last_mesh, transparent_material, model_transparent_transform_matrix);
+            
+            
         }
-
-        // Do game logic, present a frame, etc.
-        SDL_RenderClear(render);
-        SDL_UpdateTexture(texture, NULL, (void *)ren.get_result(), pich);
-        SDL_RenderTexture(render, texture, NULL, NULL);
+        
 
         if (fps_display_timer >= 1.0)
         {

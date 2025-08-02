@@ -200,6 +200,7 @@ namespace TSRPA
         virtual bool deep_check_none(unsigned int idx, float value) { return true; }
         virtual bool deep_check_less(unsigned int idx, float value)
         {
+            
             if (zbuffer[idx] < value)
             {
                 if (zbuffer_write)
@@ -366,9 +367,9 @@ namespace TSRPA
                     {
                         P.z += points[i][2] * bc_screen[i];
                     }
-                    if (calculate_deep_check(int(P.x + P.y * width), P.z))
+                    if (Renderer::calculate_deep_check(int(P.x + P.y * width), P.z))
                     {
-
+                        
                         ShaderFunctionData fragment_data;
                         for (int i = 0; i < 3; i++)
                         {
@@ -385,8 +386,8 @@ namespace TSRPA
                         {
                             glm::vec4 fragment_color_no_alpha = fragment_color;
                             fragment_color_no_alpha.a = 1.0;
-                            glm::vec4 framebuffer_color = ((glm::vec4)frame_buffer_get_color(P.x, P.y)) / glm::vec4(255.0, 255.0, 255.0, 255.0);
-                            draw_point(P.x, P.y, glm::mix(framebuffer_color, fragment_color_no_alpha, fragment_color.a) * glm::vec4(255, 255, 255, 255));
+                            glm::vec4 framebuffer_color = ((glm::vec4)Renderer::frame_buffer_get_color(P.x, P.y)) / glm::vec4(255.0, 255.0, 255.0, 255.0);
+                            Renderer::draw_point(P.x, P.y, glm::mix(framebuffer_color, fragment_color_no_alpha, fragment_color.a) * glm::vec4(255, 255, 255, 255));
                         }
                         else if (fragment_color.a == 0)
                         {
@@ -394,11 +395,17 @@ namespace TSRPA
                         }
                         else
                         {
-                            draw_point(P.x, P.y, fragment_color * glm::vec4(255, 255, 255, 255));
+                            Renderer::draw_point(P.x, P.y, fragment_color * glm::vec4(255, 255, 255, 255));
                         }
                     }
                 }
             }
+        }
+
+        virtual glm::ivec4 frame_buffer_get_color(const unsigned int &x, const unsigned int &y)
+        {
+            unsigned int i = ((y % height) * width + (x % width)) * 4;
+            return glm::ivec4(frame_buffer[i], frame_buffer[i + 1], frame_buffer[i + 2], frame_buffer[i + 3]);
         }
 
     public:
@@ -438,12 +445,6 @@ namespace TSRPA
             }
         }
 
-        virtual glm::ivec4 frame_buffer_get_color(const unsigned int &x, const unsigned int &y)
-        {
-            unsigned int i = ((y % height) * width + (x % width)) * 4;
-            return glm::ivec4(frame_buffer[i], frame_buffer[i + 1], frame_buffer[i + 2], frame_buffer[i + 3]);
-        }
-
         Renderer(unsigned int width, unsigned int height)
         {
             this->width = width;
@@ -472,11 +473,11 @@ namespace TSRPA
 
         virtual void clear()
         {
-            clear_frame_buffer();
-            clear_zbuffer();
+            Renderer::clear_frame_buffer();
+            Renderer::clear_zbuffer();
         }
 
-        virtual bool draw_point(const unsigned int &x, const unsigned int &y, const glm::ivec4 &color)
+        virtual void draw_point(const unsigned int &x, const unsigned int &y, const glm::ivec4 &color)
         {
 
             const unsigned int i = (y * width + x) * 4;
@@ -485,7 +486,6 @@ namespace TSRPA
             frame_buffer[i + 1] = color.g;
             frame_buffer[i + 2] = color.b;
             frame_buffer[i + 3] = color.a;
-            return true;
         }
 
         virtual void draw_texture(TSRPA::Texture &texture, const glm::ivec2 &offset)
@@ -498,7 +498,7 @@ namespace TSRPA
             {
                 for (unsigned int y = 0; y < std::min(texture.height, height + offset.y); y++)
                 {
-                    draw_point(x + offset.x, y + offset.y, texture.get_color(x, y));
+                    Renderer::draw_point(x + offset.x, y + offset.y, texture.get_color(x, y));
                 }
             }
         }
@@ -527,11 +527,11 @@ namespace TSRPA
             {
                 if (steep)
                 {
-                    draw_point(y, x, color);
+                    Renderer::draw_point(y, x, color);
                 }
                 else
                 {
-                    draw_point(x, y, color);
+                    Renderer::draw_point(x, y, color);
                 }
                 error2 += derror2;
                 if (error2 > dx)
@@ -544,9 +544,9 @@ namespace TSRPA
 
         virtual void draw_triangle_wire_frame(const glm::ivec2 &a, const glm::ivec2 &b, const glm::ivec2 &c, const glm::ivec4 &color)
         {
-            draw_line(a, b, color);
-            draw_line(b, c, color);
-            draw_line(c, a, color);
+            Renderer::draw_line(a, b, color);
+            Renderer::draw_line(b, c, color);
+            Renderer::draw_line(c, a, color);
         }
 
         virtual void draw_basic_triangle(glm::ivec2 a, glm::ivec2 b, glm::ivec2 c, const glm::ivec4 &color)
@@ -572,7 +572,7 @@ namespace TSRPA
                     std::swap(A, B);
                 for (int j = A.x; j <= B.x; j++)
                 {
-                    draw_point(j, a.y + i, color);
+                    Renderer::draw_point(j, a.y + i, color);
                 }
             }
         }
@@ -582,7 +582,7 @@ namespace TSRPA
             glm::mat3 normal_matrix = glm::transpose(glm::inverse(glm::mat3(transform)));
             for (unsigned int i = 0; i < mesh.face_count; i++)
             {
-                draw_shaded_triangle(mesh, i, material, transform, normal_matrix);
+                Renderer::draw_shaded_triangle(mesh, i, material, transform, normal_matrix);
             }
         }
     };
@@ -619,13 +619,13 @@ namespace TSRPA
     public:
         void add_task(std::function<void()> task)
         {
-            
+
             std::unique_lock<std::mutex> lock(mtx);
             list.push_back(task);
         }
         std::function<void()> get_task()
         {
-            
+
             std::unique_lock<std::mutex> lock(mtx);
             std::function<void()> task = list[0];
             list.erase(list.begin());
@@ -633,7 +633,9 @@ namespace TSRPA
         }
         bool completed()
         {
+
             std::unique_lock<std::mutex> lock(mtx);
+
             return list.size() == 0;
         }
         void wait_for_completion()
@@ -660,84 +662,219 @@ namespace TSRPA
             {
                 std::this_thread::sleep_for(std::chrono::microseconds(10));
 
-                if(task_list.completed()){
+                if (task_list.completed())
+                {
                     continue;
                 }
                 task_list.get_task()();
-                
             }
         }
 
-        void start_render_thread(){
+        void start_render_thread()
+        {
             proceed.set(true);
             renderer_thread = std::thread(&MultThreadRenderer::loop, this);
         }
 
-        //reminder how use task_list
-        //task_list.add_task(std::bind(&printf, "A\n"));
-        //task_list.wait_for_completion();
+        unsigned int safe_width_height[2];
 
-        void set_clear_color_ptr(glm::ivec4 *color) { clear_color = *color; }
+        bool safe_zbuffer_write = true;
 
-        void set_face_mode_ptr(ShowFaces *mode) { face_mode = *mode; }
+        DeephMode safe_deeph_mode;
 
-        void set_view_matrix_ptr(glm::mat4 *mat) { view_matrix = *mat; }
+        glm::ivec4 safe_lear_color;
 
-        void set_projection_matrix_ptr(glm::mat4 *mat) { projection_matrix = *mat; }
+        ShowFaces safe_face_mode;
 
-        void set_zbuffer_write_ptr(bool *on) { zbuffer_write = *on; }
-
-        void set_deeph_mode_ptr(DeephMode *mode)
-        {
-            Renderer::set_deeph_mode(*mode);
-        }
-
-        glm::ivec4 frame_buffer_get_color_ptr(const unsigned int *x, const unsigned int *y)
-        {
-            return Renderer::frame_buffer_get_color(*x, *y);
-        }
-
-        bool draw_point_ptr(const unsigned int *x, const unsigned int *y, const glm::ivec4 *color)
-        {
-            return Renderer::draw_point(*x, *y, *color);
-        }
-
-        void draw_texture_ptr(TSRPA::Texture *texture, const glm::ivec2 *offset)
-        {
-            Renderer::draw_texture(*texture, *offset);
-        }
-
-        void draw_line_ptr(glm::ivec2 a, glm::ivec2 b, const glm::ivec4 *color)
-        {
-            Renderer::draw_line(a, b, *color);
-        }
-
-        void draw_triangle_wire_frame_ptr(const glm::ivec2 *a, const glm::ivec2 *b, const glm::ivec2 *c, const glm::ivec4 *color)
-        {
-            Renderer::draw_triangle_wire_frame(*a, *b, *c, *color);
-        }
-
-        void draw_basic_triangle_ptr(glm::ivec2 a, glm::ivec2 b, glm::ivec2 c, const glm::ivec4 *color)
-        {
-            Renderer::draw_basic_triangle(a, b, c, *color);
-        }
-
-        void draw_shaded_mesh_ptr(MeshBase *mesh, Material *material, glm::mat4 *transform)
-        {
-            Renderer::draw_shaded_mesh(*mesh, *material, *transform);
-        }
+        glm::mat4 safe_view_matrix;
+        glm::mat4 safe_projection_matrix;
 
     public:
+        bool get_zbuffer_write() override { return safe_zbuffer_write; }
+        void base_set_zbuffer_write(bool on)
+        {
+            Renderer::set_zbuffer_write(on);
+        }
+        void set_zbuffer_write(bool on) override
+        {
+            printf("set_zbuffer_write\n");
+            safe_zbuffer_write = on;
+            task_list.add_task(std::bind(&MultThreadRenderer::base_set_zbuffer_write, this, on));
+        }
+
+        DeephMode get_deeph_mode() override { return safe_deeph_mode; }
+        void base_set_deeph_mode(DeephMode mode)
+        {
+            Renderer::set_deeph_mode(mode);
+        }
+        void set_deeph_mode(DeephMode mode) override
+        {
+            printf("set_deeph_mode\n");
+            safe_deeph_mode = mode;
+            task_list.add_task(std::bind(&MultThreadRenderer::base_set_deeph_mode, this, mode));
+        }
+
+        unsigned int get_width() override { return safe_width_height[0]; }
+        unsigned int get_height() override { return safe_width_height[1]; }
+
+        glm::ivec4 get_clear_color() override { return safe_lear_color; }
+
+        void base_set_clear_color(glm::ivec4 color)
+        {
+            Renderer::set_clear_color(color);
+        }
+        void set_clear_color(glm::ivec4 color) override
+        {
+            printf("set_clear_color\n");
+            safe_lear_color = color;
+            task_list.add_task(std::bind(&MultThreadRenderer::base_set_clear_color, this, color));
+        }
+
+        ShowFaces get_face_mode() override { return safe_face_mode; }
+
+        void base_set_face_mode(ShowFaces mode)
+        {
+            Renderer::set_face_mode(mode);
+        }
+        void set_face_mode(ShowFaces mode) override
+        {
+            printf("set_face_mode\n");
+            safe_face_mode = mode;
+            task_list.add_task(std::bind(&MultThreadRenderer::base_set_face_mode, this, mode));
+        }
+
+        glm::mat4 get_view_matrix() override { return safe_view_matrix; }
+        void base_set_view_matrix(glm::mat4 mat)
+        {
+            Renderer::set_view_matrix(mat);
+        }
+        void set_view_matrix(glm::mat4 mat) override
+        {
+            printf("set_view_matrix\n");
+            safe_view_matrix = mat;
+            task_list.add_task(std::bind(&MultThreadRenderer::base_set_view_matrix, this, mat));
+        }
+
+        glm::mat4 get_projection_matrix() override { return safe_projection_matrix; }
+        void base_set_projection_matrix(glm::mat4 mat)
+        {
+            Renderer::set_projection_matrix(mat);
+        }
+        void set_projection_matrix(glm::mat4 mat) override
+        {
+            printf("set_projection_matrix\n");
+            safe_projection_matrix = mat;
+            task_list.add_task(std::bind(&MultThreadRenderer::base_set_projection_matrix, this, mat));
+        }
+
+        void base_clear_zbuffer()
+        {
+            Renderer::clear_zbuffer();
+        }
+        void clear_zbuffer() override
+        {
+            printf("clear_zbuffer\n");
+            task_list.add_task(std::bind(&MultThreadRenderer::base_clear_zbuffer, this));
+        }
+
+        void base_clear_frame_buffer()
+        {
+            Renderer::clear_frame_buffer();
+        }
+        void clear_frame_buffer() override
+        {
+            printf("clear_frame_buffer\n");
+            task_list.add_task(std::bind(&MultThreadRenderer::base_clear_frame_buffer, this));
+        }
+
+        
+        void base_clear()
+        {
+            Renderer::clear();
+        }
+        void clear() override
+        {
+            printf("clear\n");
+            task_list.add_task(std::bind(&MultThreadRenderer::base_clear, this));
+        }
+
+        void base_draw_point(const unsigned int &x, const unsigned int &y, const glm::ivec4 &color){
+            Renderer::draw_point(x,y,color);
+        }
+        void draw_point(const unsigned int &x, const unsigned int &y, const glm::ivec4 &color) override
+        {
+            printf("draw_point\n");
+            task_list.add_task(std::bind(&MultThreadRenderer::base_draw_point, this, x, y, color));
+        }
+
+        void ptr_draw_texture(TSRPA::Texture *texture, const glm::ivec2 &offset){
+            Renderer::draw_texture(*texture,offset);
+        }
+        void draw_texture(TSRPA::Texture &texture, const glm::ivec2 &offset) override
+        {
+            printf("draw_texture\n");
+            task_list.add_task(std::bind(&MultThreadRenderer::ptr_draw_texture, this, &texture, offset));
+        }
+
+        void base_draw_line(glm::ivec2 a, glm::ivec2 b, const glm::ivec4 &color){
+            Renderer::draw_line(a, b, color);
+        }
+        void draw_line(glm::ivec2 a, glm::ivec2 b, const glm::ivec4 &color) override
+        {
+            printf("draw_line\n");
+
+            task_list.add_task(std::bind(&MultThreadRenderer::base_draw_line, this, a, b, color));
+        }
+
+        void base_draw_triangle_wire_frame(const glm::ivec2 &a, const glm::ivec2 &b, const glm::ivec2 &c, const glm::ivec4 &color){
+            Renderer::draw_triangle_wire_frame(a, b, c, color);
+        }
+        void draw_triangle_wire_frame(const glm::ivec2 &a, const glm::ivec2 &b, const glm::ivec2 &c, const glm::ivec4 &color) override
+        {
+            printf("draw_triangle_wire_frame\n");
+            task_list.add_task(std::bind(&MultThreadRenderer::base_draw_triangle_wire_frame, this, a, b, c, color));
+        }
+
+        void base_draw_basic_triangle(glm::ivec2 a, glm::ivec2 b, glm::ivec2 c, const glm::ivec4 &color)
+        {
+            Renderer::draw_basic_triangle(a, b, c, color);
+        }
+        void draw_basic_triangle(glm::ivec2 a, glm::ivec2 b, glm::ivec2 c, const glm::ivec4 &color) override
+        {
+            printf("draw_basic_triangle\n");
+            task_list.add_task(std::bind(&MultThreadRenderer::base_draw_basic_triangle, this, a, b, c, color));
+        }
+
+        void ptr_draw_shaded_mesh(MeshBase *mesh, Material *material, glm::mat4 &transform)
+        {
+            Renderer::draw_shaded_mesh(*mesh, *material, transform);
+        }
+        void draw_shaded_mesh(MeshBase &mesh, Material &material, glm::mat4 &transform) override
+        {
+            printf("draw_shaded_mesh\n");
+            task_list.add_task(std::bind(&MultThreadRenderer::ptr_draw_shaded_mesh, this, &mesh, &material, transform));
+        }
+
         MultThreadRenderer(unsigned int width, unsigned int height) : Renderer(width, height)
         {
-            
+
             start_render_thread();
-            
+            safe_width_height[0] = width;
+            safe_width_height[1] = height;
+            MultThreadRenderer::set_deeph_mode(DeephMode::NONE);
+            MultThreadRenderer::set_zbuffer_write(true);
         }
         ~MultThreadRenderer()
         {
             proceed.set(false);
             renderer_thread.join();
+        }
+
+        unsigned char *get_result() override
+        {
+            printf("get_result\n");
+            task_list.wait_for_completion();
+            return &frame_buffer[0];
         }
     };
 #endif
