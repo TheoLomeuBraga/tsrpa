@@ -183,13 +183,13 @@ void print_mesage(SDL_Renderer *render, TTF_Font *font, const std::string &text)
 {
     SDL_Color white = {255, 255, 255, 255};
     const char *message = text.c_str();
-    SDL_Surface *surfaceMessage = TTF_RenderText_Solid(font, message, sizeof(message), white);
+    SDL_Surface *surfaceMessage = TTF_RenderText_Solid(font, message, text.size(), white);
     SDL_Texture *Message = SDL_CreateTextureFromSurface(render, surfaceMessage);
     SDL_SetTextureScaleMode(Message, SDL_SCALEMODE_NEAREST);
     SDL_FRect Message_rect;
     Message_rect.x = 0;
     Message_rect.y = 0;
-    Message_rect.w = 256;
+    Message_rect.w = 512;
     Message_rect.h = 64;
     SDL_RenderTexture(render, Message, NULL, &Message_rect);
     SDL_DestroySurface(surfaceMessage);
@@ -236,8 +236,8 @@ int main(int argc, char *argv[])
     
     textured_material.texture = &last_texture;
 
-    //TSRPA::Renderer ren(1024, 1024);
-    TSRPA::MultThreadRenderer ren(1024, 1024);
+    //TSRPA::Renderer ren(512, 512);
+    TSRPA::MultThreadRenderer ren(512, 512);
     ren.set_clear_color(TSRPA::Palette::INVISIBLE);
     ren.clear();
 
@@ -349,7 +349,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        if (last_mesh.is_valid() && last_texture.is_valid())
+        if (last_mesh.is_valid() )
         {
             
             ren.set_clear_color(TSRPA::Palette::INVISIBLE);
@@ -373,12 +373,14 @@ int main(int argc, char *argv[])
             
         }
 
-        
-        
-
         if (fps_display_timer >= 1.0)
         {
+            
             fps_text = std::string("FPS: ") + std::to_string(fps_frames_passed) + "\n";
+            if(!last_mesh.is_valid() && !last_texture.is_valid()){
+                fps_text = "drop .obj or .png file here\n";
+            }
+
             fps_display_timer = 0;
             fps_frames_passed = 0;
         }
