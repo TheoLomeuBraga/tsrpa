@@ -94,23 +94,23 @@ public:
 
         for (size_t s = 0; s < shapes.size(); s++)
         {
-            // Loop over faces(polygon)
+            
             size_t index_offset = 0;
             for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++)
             {
                 size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
 
-                // Loop over vertices in the face.
+                
                 for (size_t v = 0; v < fv; v++)
                 {
-                    // access to vertex
+                    
                     tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
                     this->vertex.push_back(glm::vec3(
                         attrib.vertices[3 * size_t(idx.vertex_index) + 0],
                         attrib.vertices[3 * size_t(idx.vertex_index) + 1],
                         attrib.vertices[3 * size_t(idx.vertex_index) + 2]));
 
-                    // Check if `normal_index` is zero or positive. negative = no normal data
+                        
                     if (idx.normal_index >= 0)
                     {
                         this->normal.push_back(glm::vec3(
@@ -119,7 +119,7 @@ public:
                             attrib.normals[3 * size_t(idx.normal_index) + 2]));
                     }
 
-                    // Check if `texcoord_index` is zero or positive. negative = no texcoord data
+                    
                     if (idx.texcoord_index >= 0)
                     {
                         this->uv.push_back(glm::vec2(
@@ -127,7 +127,7 @@ public:
                             attrib.texcoords[2 * size_t(idx.texcoord_index) + 1]));
                     }
 
-                    // Optional: vertex colors
+                    
                     this->color.push_back(glm::vec3(
                         attrib.colors[3 * size_t(idx.vertex_index) + 0],
                         attrib.colors[3 * size_t(idx.vertex_index) + 1],
@@ -135,7 +135,7 @@ public:
                 }
                 index_offset += fv;
 
-                // per-face material
+                
                 shapes[s].mesh.material_ids[f];
             }
         }
@@ -148,7 +148,6 @@ ObjMesh last_mesh;
 PngTexture last_texture;
 
 glm::mat4 model_transform_matrix;
-glm::mat4 model_transparent_transform_matrix;
 
 class TexturedMaterial : public TSRPA::Material
 {
@@ -200,10 +199,10 @@ void print_mesage(SDL_Renderer *render, TTF_Font *font, const std::string &text)
 int main(int argc, char *argv[])
 {
 
-    SDL_Window *window; // Declare a pointer
+    SDL_Window *window;
     bool done = false;
 
-    SDL_Init(SDL_INIT_VIDEO); // Initialize SDL3
+    SDL_Init(SDL_INIT_VIDEO);
     SDL_srand(42);
 
     if (TTF_Init() == -1)
@@ -211,24 +210,20 @@ int main(int argc, char *argv[])
         std::cerr << "TTF_Init failed: " << SDL_GetError() << std::endl;
         return 1;
     }
-
-    // Create an application window with the following settings:
+    
     window = SDL_CreateWindow(
-        "Hello SDL3 render atempt",                   // window title
-        1024,                                         // width, in pixels
-        1024,                                         // height, in pixels
-        SDL_WINDOW_RESIZABLE | SDL_WINDOW_TRANSPARENT // flags - see below
+        "Hello SDL3 render atempt",
+        1024,
+        1024,
+        SDL_WINDOW_RESIZABLE | SDL_WINDOW_TRANSPARENT
     );
-
-    // Check that the window was successfully created
+    
     if (window == NULL)
     {
-        // In the case that the window could not be made...
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Could not create window: %s\n", SDL_GetError());
         return 1;
     }
-
-    // render image
+    
     SDL_Renderer *render = SDL_CreateRenderer(window, NULL);
     if (render == nullptr)
     {
@@ -241,8 +236,8 @@ int main(int argc, char *argv[])
     
     textured_material.texture = &last_texture;
 
-    TSRPA::Renderer ren(1024, 1024);
-    //TSRPA::MultThreadRenderer ren(1024, 1024);
+    //TSRPA::Renderer ren(1024, 1024);
+    TSRPA::MultThreadRenderer ren(1024, 1024);
     ren.set_clear_color(TSRPA::Palette::INVISIBLE);
     ren.clear();
 
@@ -261,8 +256,6 @@ int main(int argc, char *argv[])
 
     glm::vec3 model_pos(0.0f, 0.0f, 5.0f);
     model_transform_matrix = glm::translate(glm::mat4(1.0f), model_pos);
-    model_transparent_transform_matrix = glm::translate(glm::mat4(1.0f), model_pos);
-    model_transparent_transform_matrix = glm::scale(model_transparent_transform_matrix, glm::vec3(1.2, 1.2, 1.2));
 
     transparent_material.color = glm::vec4(0.5, 0.5, 1.0, 0.2);
 
@@ -372,11 +365,15 @@ int main(int argc, char *argv[])
             ren.set_zbuffer_write(false);
             ren.set_deeph_mode(TSRPA::DeephMode::LESS);
 
-            model_transparent_transform_matrix = glm::rotate(model_transparent_transform_matrix, (float)(glm::radians(90.0f) * delta_time), glm::vec3(0.0f, 1.0f, 0.0f));
-            ren.draw_shaded_mesh(last_mesh, transparent_material, model_transparent_transform_matrix);
+            
+            //draw ghost
+            glm::mat4 ghost_matrix = glm::scale(model_transform_matrix, glm::vec3(1.2, 1.2, 1.2));
+            ren.draw_shaded_mesh(last_mesh, transparent_material, ghost_matrix);
             
             
         }
+
+        
         
 
         if (fps_display_timer >= 1.0)

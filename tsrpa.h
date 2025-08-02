@@ -388,6 +388,7 @@ namespace TSRPA
                             fragment_color_no_alpha.a = 1.0;
                             glm::vec4 framebuffer_color = ((glm::vec4)Renderer::frame_buffer_get_color(P.x, P.y)) / glm::vec4(255.0, 255.0, 255.0, 255.0);
                             Renderer::draw_point(P.x, P.y, glm::mix(framebuffer_color, fragment_color_no_alpha, fragment_color.a) * glm::vec4(255, 255, 255, 255));
+                            //Renderer::draw_point(P.x, P.y,glm::vec4(255, 255, 255, 255));
                         }
                         else if (fragment_color.a == 0)
                         {
@@ -638,8 +639,12 @@ namespace TSRPA
 
             return list.size() == 0;
         }
+
+        void do_nothing(){} //this is important SERIOUS
         void wait_for_completion()
         {
+            add_task(std::bind(&MultThreadRendererTaskList::do_nothing,this));//this is for certify that evry instruction was executed on the mult thread
+
             while (!completed())
             {
                 std::this_thread::sleep_for(std::chrono::microseconds(10));
@@ -697,7 +702,6 @@ namespace TSRPA
         }
         void set_zbuffer_write(bool on) override
         {
-            printf("set_zbuffer_write\n");
             safe_zbuffer_write = on;
             task_list.add_task(std::bind(&MultThreadRenderer::base_set_zbuffer_write, this, on));
         }
@@ -709,7 +713,6 @@ namespace TSRPA
         }
         void set_deeph_mode(DeephMode mode) override
         {
-            printf("set_deeph_mode\n");
             safe_deeph_mode = mode;
             task_list.add_task(std::bind(&MultThreadRenderer::base_set_deeph_mode, this, mode));
         }
@@ -725,7 +728,6 @@ namespace TSRPA
         }
         void set_clear_color(glm::ivec4 color) override
         {
-            printf("set_clear_color\n");
             safe_lear_color = color;
             task_list.add_task(std::bind(&MultThreadRenderer::base_set_clear_color, this, color));
         }
@@ -738,7 +740,6 @@ namespace TSRPA
         }
         void set_face_mode(ShowFaces mode) override
         {
-            printf("set_face_mode\n");
             safe_face_mode = mode;
             task_list.add_task(std::bind(&MultThreadRenderer::base_set_face_mode, this, mode));
         }
@@ -750,7 +751,6 @@ namespace TSRPA
         }
         void set_view_matrix(glm::mat4 mat) override
         {
-            printf("set_view_matrix\n");
             safe_view_matrix = mat;
             task_list.add_task(std::bind(&MultThreadRenderer::base_set_view_matrix, this, mat));
         }
@@ -762,7 +762,6 @@ namespace TSRPA
         }
         void set_projection_matrix(glm::mat4 mat) override
         {
-            printf("set_projection_matrix\n");
             safe_projection_matrix = mat;
             task_list.add_task(std::bind(&MultThreadRenderer::base_set_projection_matrix, this, mat));
         }
@@ -773,7 +772,6 @@ namespace TSRPA
         }
         void clear_zbuffer() override
         {
-            printf("clear_zbuffer\n");
             task_list.add_task(std::bind(&MultThreadRenderer::base_clear_zbuffer, this));
         }
 
@@ -783,7 +781,6 @@ namespace TSRPA
         }
         void clear_frame_buffer() override
         {
-            printf("clear_frame_buffer\n");
             task_list.add_task(std::bind(&MultThreadRenderer::base_clear_frame_buffer, this));
         }
 
@@ -794,7 +791,6 @@ namespace TSRPA
         }
         void clear() override
         {
-            printf("clear\n");
             task_list.add_task(std::bind(&MultThreadRenderer::base_clear, this));
         }
 
@@ -803,7 +799,6 @@ namespace TSRPA
         }
         void draw_point(const unsigned int &x, const unsigned int &y, const glm::ivec4 &color) override
         {
-            printf("draw_point\n");
             task_list.add_task(std::bind(&MultThreadRenderer::base_draw_point, this, x, y, color));
         }
 
@@ -812,7 +807,6 @@ namespace TSRPA
         }
         void draw_texture(TSRPA::Texture &texture, const glm::ivec2 &offset) override
         {
-            printf("draw_texture\n");
             task_list.add_task(std::bind(&MultThreadRenderer::ptr_draw_texture, this, &texture, offset));
         }
 
@@ -821,8 +815,6 @@ namespace TSRPA
         }
         void draw_line(glm::ivec2 a, glm::ivec2 b, const glm::ivec4 &color) override
         {
-            printf("draw_line\n");
-
             task_list.add_task(std::bind(&MultThreadRenderer::base_draw_line, this, a, b, color));
         }
 
@@ -831,7 +823,6 @@ namespace TSRPA
         }
         void draw_triangle_wire_frame(const glm::ivec2 &a, const glm::ivec2 &b, const glm::ivec2 &c, const glm::ivec4 &color) override
         {
-            printf("draw_triangle_wire_frame\n");
             task_list.add_task(std::bind(&MultThreadRenderer::base_draw_triangle_wire_frame, this, a, b, c, color));
         }
 
@@ -841,7 +832,6 @@ namespace TSRPA
         }
         void draw_basic_triangle(glm::ivec2 a, glm::ivec2 b, glm::ivec2 c, const glm::ivec4 &color) override
         {
-            printf("draw_basic_triangle\n");
             task_list.add_task(std::bind(&MultThreadRenderer::base_draw_basic_triangle, this, a, b, c, color));
         }
 
@@ -851,7 +841,6 @@ namespace TSRPA
         }
         void draw_shaded_mesh(MeshBase &mesh, Material &material, glm::mat4 &transform) override
         {
-            printf("draw_shaded_mesh\n");
             task_list.add_task(std::bind(&MultThreadRenderer::ptr_draw_shaded_mesh, this, &mesh, &material, transform));
         }
 
@@ -872,7 +861,6 @@ namespace TSRPA
 
         unsigned char *get_result() override
         {
-            printf("get_result\n");
             task_list.wait_for_completion();
             return &frame_buffer[0];
         }
