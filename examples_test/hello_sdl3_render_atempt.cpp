@@ -25,7 +25,7 @@ public:
     PngTexture() : TSRPA::Texture() {}
     PngTexture(const char *path) : TSRPA::Texture()
     {
-        // printf("loading: %s\n", path);
+        
         SDL_Surface *image_data = IMG_Load(path);
 
         if (!image_data)
@@ -253,9 +253,8 @@ int main(int argc, char *argv[])
 
     const unsigned int pich = ren.get_width() * 4;
 
-    printf("i will get the result\n");
+    
     SDL_Surface *surface = SDL_CreateSurfaceFrom(ren.get_width(), ren.get_height(), SDL_PIXELFORMAT_RGBA32, (void *)ren.get_result(), pich);
-    printf("i get the result\n");
     SDL_Texture *texture = SDL_CreateTextureFromSurface(render, surface);
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
     SDL_DestroySurface(surface);
