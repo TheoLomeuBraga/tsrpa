@@ -2,150 +2,27 @@
 #include <cmath>
 #include <vector>
 #include <SDL3/SDL.h>
-#include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+
+
 
 #define TSRPA_MULT_THREAD_RENDERER
 #define TSRPA_ADD_BASIC_COLOR_PALETTE
 #include "tsrpa.h"
 
-#define TINYOBJLOADER_IMPLEMENTATION
-#include "tiny_obj_loader.h"
+#include "image_loader.h"
+#include "mesh_loader.h"
 
 
 
 // #define GLM_FORCE_SSE2 // or GLM_FORCE_SSE42 if your processor supports it
 // #define GLM_FORCE_ALIGNED
 
-class PngTexture : public TSRPA::Texture
-{
-public:
-    PngTexture() : TSRPA::Texture() {}
-    PngTexture(const char *path) : TSRPA::Texture()
-    {
-        
-        SDL_Surface *image_data = IMG_Load(path);
-
-        if (!image_data)
-        {
-            SDL_Log("Fail to load image: %s", SDL_GetError());
-            return;
-        }
-
-        SDL_Surface *new_image_data = SDL_ConvertSurface(image_data, SDL_PIXELFORMAT_RGBA32);
-
-        if (!new_image_data)
-        {
-            SDL_Log("Fail to convert surface: %s", SDL_GetError());
-            SDL_DestroySurface(image_data);
-            return;
-        }
-
-        width = new_image_data->w;
-        height = new_image_data->h;
-        data.resize(width * height * 4);
-
-        Uint32 *pixels = (Uint32 *)new_image_data->pixels;
-        for (unsigned int i = 0; i < new_image_data->w * new_image_data->h; i++)
-        {
-            unsigned int data_idx = i * 4;
-            SDL_GetRGBA(pixels[i], SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA32), NULL, &data[data_idx + 0], &data[data_idx + 1], &data[data_idx + 2], &data[data_idx + 3]);
-        }
-
-        SDL_DestroySurface(new_image_data);
-
-        SDL_DestroySurface(image_data);
-    }
-};
-
-class ObjMesh : public TSRPA::Mesh
-{
-public:
-    ObjMesh() : TSRPA::Mesh() {}
-    ObjMesh(const char *path) : TSRPA::Mesh()
-    {
-        printf("loading: %s\n", path);
-
-        std::string inputfile = path;
-        tinyobj::ObjReaderConfig reader_config;
-        reader_config.triangulate = true;
-
-        tinyobj::ObjReader reader;
-
-        if (!reader.ParseFromFile(inputfile, reader_config))
-        {
-            if (!reader.Error().empty())
-            {
-                std::cerr << "TinyObjReader: " << reader.Error();
-            }
-            return;
-        }
-
-        const tinyobj::attrib_t &attrib = reader.GetAttrib();
-        const std::vector<tinyobj::shape_t> &shapes = reader.GetShapes();
-        const std::vector<tinyobj::material_t> &materials = reader.GetMaterials();
-
-        if (materials.size() > 0)
-        {
-            printf("%s\n", materials[0].alpha_texname.c_str());
-        }
-
-        for (size_t s = 0; s < shapes.size(); s++)
-        {
-            
-            size_t index_offset = 0;
-            for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++)
-            {
-                size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
-
-                
-                for (size_t v = 0; v < fv; v++)
-                {
-                    
-                    tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
-                    this->vertex.push_back(glm::vec3(
-                        attrib.vertices[3 * size_t(idx.vertex_index) + 0],
-                        attrib.vertices[3 * size_t(idx.vertex_index) + 1],
-                        attrib.vertices[3 * size_t(idx.vertex_index) + 2]));
-
-                        
-                    if (idx.normal_index >= 0)
-                    {
-                        this->normal.push_back(glm::vec3(
-                            attrib.normals[3 * size_t(idx.normal_index) + 0],
-                            attrib.normals[3 * size_t(idx.normal_index) + 1],
-                            attrib.normals[3 * size_t(idx.normal_index) + 2]));
-                    }
-
-                    
-                    if (idx.texcoord_index >= 0)
-                    {
-                        this->uv.push_back(glm::vec2(
-                            attrib.texcoords[2 * size_t(idx.texcoord_index) + 0],
-                            attrib.texcoords[2 * size_t(idx.texcoord_index) + 1]));
-                    }
-
-                    
-                    this->color.push_back(glm::vec3(
-                        attrib.colors[3 * size_t(idx.vertex_index) + 0],
-                        attrib.colors[3 * size_t(idx.vertex_index) + 1],
-                        attrib.colors[3 * size_t(idx.vertex_index) + 2]));
-                }
-                index_offset += fv;
-
-                
-                shapes[s].mesh.material_ids[f];
-            }
-        }
-        this->vert_count = this->vertex.size();
-        this->face_count = this->vertex.size() / 3;
-    }
-};
 
 ObjMesh last_mesh;
-PngTexture last_texture;
+ImageTexture last_texture;
 
 glm::mat4 model_transform_matrix;
 
@@ -283,7 +160,7 @@ int main(int argc, char *argv[])
     TTF_Font *font = TTF_OpenFont(font_path.c_str(), 24);
     if (font == NULL)
     {
-        printf("error file AlienCyborg.ttf not found\n");
+        SDL_Log("error file AlienCyborg.ttf not found\n");
         return 0;
     }
 
@@ -330,7 +207,7 @@ int main(int argc, char *argv[])
                     
                 }
 
-                PngTexture new_texture(event.drop.data);
+                ImageTexture new_texture(event.drop.data);
                 if (new_texture.is_valid())
                 {
                     last_texture = new_texture;
