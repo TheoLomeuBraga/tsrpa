@@ -171,6 +171,223 @@ namespace TSRPA
         GREATER = 2,
     };
 
+    class OcclusionDetector
+    {
+    protected:
+        unsigned int width;
+        unsigned int height;
+        std::vector<float> zbuffer;
+        glm::mat4 view_matrix;
+        glm::mat4 projection_matrix;
+        bool zbuffer_write = true;
+        std::function<bool(unsigned int, float)> deep_check_func;
+        DeephMode deeph_mode;
+
+        bool deep_check_none(unsigned int idx, float value) { return true; }
+        bool deep_check_less(unsigned int idx, float value)
+        {
+
+            if (zbuffer[idx] < value)
+            {
+                if (zbuffer_write)
+                {
+                    zbuffer[idx] = value;
+                }
+
+                return true;
+            }
+            return false;
+        }
+        bool deep_check_greater(unsigned int idx, float value)
+        {
+            if (zbuffer[idx] > value)
+            {
+                if (zbuffer_write)
+                {
+                    zbuffer[idx] = value;
+                }
+                return true;
+            }
+            return false;
+        }
+        bool calculate_deep_check(unsigned int idx, float value)
+        {
+            return deep_check_func(idx, value);
+        }
+
+        glm::vec3 calculate_screen_position(const glm::vec3 &vertex, const glm::mat4 &model_transform_matrix)
+        {
+
+            glm::mat4 mvp = projection_matrix * view_matrix * model_transform_matrix;
+
+            glm::vec4 clip_space_pos = mvp * glm::vec4(vertex, 1.0);
+
+            glm::vec3 space_pos;
+            space_pos.x = clip_space_pos.x / clip_space_pos.w;
+            space_pos.y = clip_space_pos.y / clip_space_pos.w;
+            space_pos.z = clip_space_pos.z / clip_space_pos.w;
+
+            glm::vec3 screenSpacePos;
+            screenSpacePos.x = (space_pos.x + 1.0f) * 0.5f * width;
+            screenSpacePos.y = (1.0f - space_pos.y) * 0.5f * height;
+            screenSpacePos.z = 1.0f - space_pos.z;
+
+            return screenSpacePos;
+        }
+
+        glm::vec3 calculate_screen_position_from_plane(const glm::vec4 &pos)
+        {
+
+            glm::vec4 clip_space_pos = pos;
+
+            glm::vec3 space_pos;
+            space_pos.x = clip_space_pos.x / clip_space_pos.w;
+            space_pos.y = clip_space_pos.y / clip_space_pos.w;
+            space_pos.z = clip_space_pos.z / clip_space_pos.w;
+
+            glm::vec3 screenSpacePos;
+            screenSpacePos.x = (space_pos.x + 1.0f) * 0.5f * width;
+            screenSpacePos.y = (1.0f - space_pos.y) * 0.5f * height;
+            screenSpacePos.z = 1.0f - space_pos.z;
+
+            return screenSpacePos;
+        }
+
+        glm::vec3 barycentric(const glm::vec3 *pts, const glm::vec3 &P)
+        {
+            glm::vec3 u = glm::cross(glm::vec3(pts[2][0] - pts[0][0], pts[1][0] - pts[0][0], pts[0][0] - P[0]), glm::vec3(pts[2][1] - pts[0][1], pts[1][1] - pts[0][1], pts[0][1] - P[1]));
+            if (std::abs(u.z) < 1)
+            {
+                return glm::vec3(-1, 1, 1);
+            }
+            return glm::vec3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
+        }
+
+        void vertex_shader(ShaderFunctionData &data, const glm::mat4 &projection, const glm::mat4 &view, const glm::mat4 &model, const glm::mat3 &normal_matrix)
+        {
+            data.position = (projection * view * model) * data.position;
+        }
+
+        bool check_triangle(MeshBase &mesh, const unsigned int face_id, const glm::mat4 &transform, const glm::mat3 &normal_matrix)
+        {
+            bool ret = false;
+            ShaderFunctionData vertex_data[3];
+
+            for (int i = 0; i < 3; i++)
+            {
+
+                mesh.get_vertex_data(vertex_data[i], (face_id * 3) + i);
+            }
+
+            glm::ivec2 bboxmin(width - 1, height - 1);
+            glm::ivec2 bboxmax(0, 0);
+            glm::ivec2 clamp(width - 1, height - 1);
+            glm::vec3 points[3];
+
+            for (int i = 0; i < 3; i++)
+            {
+                vertex_shader(vertex_data[i], projection_matrix, view_matrix, transform, normal_matrix);
+                points[i] = calculate_screen_position_from_plane(vertex_data[i].position);
+
+                bboxmin.x = std::max(0, (int)std::min(bboxmin.x, (int)points[i].x));
+                bboxmin.y = std::max(0, (int)std::min(bboxmin.y, (int)points[i].y));
+
+                bboxmax.x = std::min(clamp.x, std::max(bboxmax.x, (int)points[i].x));
+                bboxmax.y = std::min(clamp.y, std::max(bboxmax.y, (int)points[i].y));
+            }
+            glm::vec3 P;
+            for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++)
+            {
+                for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
+                {
+                    glm::vec3 bc_screen = barycentric(points, P);
+                    if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
+                    {
+                        continue;
+                    }
+
+                    P.z = 0;
+                    for (int i = 0; i < 3; i++)
+                    {
+                        P.z += points[i][2] * bc_screen[i];
+                    }
+                    if (calculate_deep_check(int(P.x + P.y * width), P.z))
+                    {
+                        ret = true;
+                        if (!zbuffer_write)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return ret;
+        }
+
+    public:
+        OcclusionDetector() {}
+        OcclusionDetector(unsigned int width, unsigned int height)
+        {
+            this->width = width;
+            this->height = height;
+
+            zbuffer.resize(this->width * this->height);
+        }
+
+        DeephMode get_deeph_mode() { return deeph_mode; }
+        void set_deeph_mode(DeephMode mode)
+        {
+            deeph_mode = mode;
+            switch (mode)
+            {
+            case 0:
+                deep_check_func = std::bind(&OcclusionDetector::deep_check_none, this, std::placeholders::_1, std::placeholders::_2);
+                break;
+            case 1:
+                deep_check_func = std::bind(&OcclusionDetector::deep_check_less, this, std::placeholders::_1, std::placeholders::_2);
+                break;
+            case 2:
+                deep_check_func = std::bind(&OcclusionDetector::deep_check_greater, this, std::placeholders::_1, std::placeholders::_2);
+                break;
+            }
+        }
+
+        bool get_zbuffer_write() { return zbuffer_write; }
+        void set_zbuffer_write(bool on) { zbuffer_write = on; }
+
+        glm::mat4 get_view_matrix() { return view_matrix; }
+        void set_view_matrix(glm::mat4 mat) { view_matrix = mat; }
+
+        glm::mat4 get_projection_matrix() { return projection_matrix; }
+        void set_projection_matrix(glm::mat4 mat) { projection_matrix = mat; }
+
+        void clear()
+        {
+            for (unsigned int i = 0; i < zbuffer.size(); i++)
+            {
+                zbuffer[i] = 0;
+            }
+        }
+
+        bool check_mesh(MeshBase &mesh, glm::mat4 &transform)
+        {
+            bool ret = false;
+            glm::mat3 normal_matrix = glm::transpose(glm::inverse(glm::mat3(transform)));
+            for (unsigned int i = 0; i < mesh.face_count; i++)
+            {
+                if (check_triangle(mesh, i, transform, normal_matrix))
+                {
+                    ret = true;
+                    if (!zbuffer_write)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return ret;
+        }
+    };
+
     enum ShowFaces
     {
         BOTH = 0,
@@ -200,7 +417,7 @@ namespace TSRPA
         virtual bool deep_check_none(unsigned int idx, float value) { return true; }
         virtual bool deep_check_less(unsigned int idx, float value)
         {
-            
+
             if (zbuffer[idx] < value)
             {
                 if (zbuffer_write)
@@ -338,11 +555,7 @@ namespace TSRPA
 
             for (int i = 0; i < 3; i++)
             {
-
-                // vertex_data[i].normal = glm::normalize(normal_matrix * vertex_data[i].normal);
-
                 material.vertex_shader(vertex_data[i], projection_matrix, view_matrix, transform, normal_matrix);
-                // points[i] = calculate_screen_position(vertex_data[i].position, transform);
                 points[i] = calculate_screen_position_from_plane(vertex_data[i].position);
 
                 bboxmin.x = std::max(0, (int)std::min(bboxmin.x, (int)points[i].x));
@@ -369,7 +582,7 @@ namespace TSRPA
                     }
                     if (Renderer::calculate_deep_check(int(P.x + P.y * width), P.z))
                     {
-                        
+
                         ShaderFunctionData fragment_data;
                         for (int i = 0; i < 3; i++)
                         {
@@ -388,7 +601,6 @@ namespace TSRPA
                             fragment_color_no_alpha.a = 1.0;
                             glm::vec4 framebuffer_color = ((glm::vec4)Renderer::frame_buffer_get_color(P.x, P.y)) / glm::vec4(255.0, 255.0, 255.0, 255.0);
                             Renderer::draw_point(P.x, P.y, glm::mix(framebuffer_color, fragment_color_no_alpha, fragment_color.a) * glm::vec4(255, 255, 255, 255));
-                            //Renderer::draw_point(P.x, P.y,glm::vec4(255, 255, 255, 255));
                         }
                         else if (fragment_color.a == 0)
                         {
@@ -640,10 +852,10 @@ namespace TSRPA
             return list.size() == 0;
         }
 
-        void do_nothing(){} //this is important SERIOUS
+        void do_nothing() {} // this is important SERIOUS
         void wait_for_completion()
         {
-            add_task(std::bind(&MultThreadRendererTaskList::do_nothing,this));//this is for certify that evry instruction was executed on the mult thread
+            add_task(std::bind(&MultThreadRendererTaskList::do_nothing, this)); // this is for certify that evry instruction was executed on the mult thread
 
             while (!completed())
             {
@@ -784,7 +996,6 @@ namespace TSRPA
             task_list.add_task(std::bind(&MultThreadRenderer::base_clear_frame_buffer, this));
         }
 
-        
         void base_clear()
         {
             Renderer::clear();
@@ -794,23 +1005,26 @@ namespace TSRPA
             task_list.add_task(std::bind(&MultThreadRenderer::base_clear, this));
         }
 
-        void base_draw_point(const unsigned int &x, const unsigned int &y, const glm::ivec4 &color){
-            Renderer::draw_point(x,y,color);
+        void base_draw_point(const unsigned int &x, const unsigned int &y, const glm::ivec4 &color)
+        {
+            Renderer::draw_point(x, y, color);
         }
         void draw_point(const unsigned int &x, const unsigned int &y, const glm::ivec4 &color) override
         {
             task_list.add_task(std::bind(&MultThreadRenderer::base_draw_point, this, x, y, color));
         }
 
-        void ptr_draw_texture(TSRPA::Texture *texture, const glm::ivec2 &offset){
-            Renderer::draw_texture(*texture,offset);
+        void ptr_draw_texture(TSRPA::Texture *texture, const glm::ivec2 &offset)
+        {
+            Renderer::draw_texture(*texture, offset);
         }
         void draw_texture(TSRPA::Texture &texture, const glm::ivec2 &offset) override
         {
             task_list.add_task(std::bind(&MultThreadRenderer::ptr_draw_texture, this, &texture, offset));
         }
 
-        void base_draw_line(glm::ivec2 a, glm::ivec2 b, const glm::ivec4 &color){
+        void base_draw_line(glm::ivec2 a, glm::ivec2 b, const glm::ivec4 &color)
+        {
             Renderer::draw_line(a, b, color);
         }
         void draw_line(glm::ivec2 a, glm::ivec2 b, const glm::ivec4 &color) override
@@ -818,7 +1032,8 @@ namespace TSRPA
             task_list.add_task(std::bind(&MultThreadRenderer::base_draw_line, this, a, b, color));
         }
 
-        void base_draw_triangle_wire_frame(const glm::ivec2 &a, const glm::ivec2 &b, const glm::ivec2 &c, const glm::ivec4 &color){
+        void base_draw_triangle_wire_frame(const glm::ivec2 &a, const glm::ivec2 &b, const glm::ivec2 &c, const glm::ivec4 &color)
+        {
             Renderer::draw_triangle_wire_frame(a, b, c, color);
         }
         void draw_triangle_wire_frame(const glm::ivec2 &a, const glm::ivec2 &b, const glm::ivec2 &c, const glm::ivec4 &color) override

@@ -113,8 +113,8 @@ int main(int argc, char *argv[])
     
     textured_material.texture = &last_texture;
 
-    //TSRPA::Renderer ren(512, 512);
     TSRPA::MultThreadRenderer ren(512, 512);
+    TSRPA::OcclusionDetector occluder(256,256);
     ren.set_clear_color(TSRPA::Palette::INVISIBLE);
     ren.clear();
 
@@ -140,19 +140,21 @@ int main(int argc, char *argv[])
         glm::vec3(0.0f, 0.0f, 0.0f),
         model_pos,
         glm::vec3(0.0f, 1.0f, 0.0f)));;
-
+    
+    occluder.set_view_matrix(ren.get_view_matrix());
     // Matriz de Projeção
     ren.set_projection_matrix(glm::perspective(
         glm::radians(45.0f),
         float(ren.get_width()) / float(ren.get_height()),
         0.1f,
         100.0f));
-
+    occluder.set_projection_matrix(ren.get_projection_matrix());
     unsigned int lastTime = 0, currentTime;
     double delta_time;
     
     
     ren.set_deeph_mode(TSRPA::DeephMode::LESS);
+    occluder.set_deeph_mode(TSRPA::DeephMode::LESS);
     ren.set_face_mode(TSRPA::FRONT);
 
     std::string font_path = std::string(SDL_GetBasePath()) + "AlienCyborg.ttf";
@@ -196,6 +198,7 @@ int main(int argc, char *argv[])
 
                 ren.set_clear_color(TSRPA::Palette::BLACK);
                 ren.clear();
+                
 
                 ObjMesh new_mesh(event.drop.data);
                 if (new_mesh.is_valid())
@@ -231,21 +234,47 @@ int main(int argc, char *argv[])
             
             ren.set_clear_color(TSRPA::Palette::INVISIBLE);
             ren.clear();
+            occluder.clear();
 
             ren.set_zbuffer_write(true);
             ren.set_deeph_mode(TSRPA::DeephMode::LESS);
 
+            occluder.set_zbuffer_write(true);
+            occluder.set_deeph_mode(TSRPA::DeephMode::LESS);
+
             model_transform_matrix = glm::rotate(model_transform_matrix, (float)(glm::radians(90.0f) * delta_time), glm::vec3(0.0f, 1.0f, 0.0f));
-            ren.draw_shaded_mesh(last_mesh, textured_material, model_transform_matrix);
+            glm::mat4 ghost_matrix = glm::scale(model_transform_matrix, glm::vec3(1.2, 1.2, 1.2));
+            glm::mat4 occlude_matrix = glm::scale(model_transform_matrix, glm::vec3(0.1, 0.1, 0.1));
+
+
+            if(occluder.check_mesh(last_mesh, model_transform_matrix)){
+                ren.draw_shaded_mesh(last_mesh, textured_material, model_transform_matrix);
+            }
+            
             
 
             ren.set_zbuffer_write(false);
-            ren.set_deeph_mode(TSRPA::DeephMode::LESS);
+            occluder.set_zbuffer_write(false);
+
+            
 
             
             //draw ghost
-            glm::mat4 ghost_matrix = glm::scale(model_transform_matrix, glm::vec3(1.2, 1.2, 1.2));
-            ren.draw_shaded_mesh(last_mesh, transparent_material, ghost_matrix);
+            
+            if(occluder.check_mesh(last_mesh, ghost_matrix)){
+                ren.draw_shaded_mesh(last_mesh, transparent_material, ghost_matrix);
+            }
+            
+            ren.set_zbuffer_write(false);
+            occluder.set_zbuffer_write(false);
+
+            ren.set_deeph_mode(TSRPA::DeephMode::NONE);
+            //draw smaller model to test occlusion
+            
+            if(occluder.check_mesh(last_mesh, occlude_matrix)){
+                ren.draw_shaded_mesh(last_mesh, textured_material, occlude_matrix);
+            }
+            
             
             
         }
