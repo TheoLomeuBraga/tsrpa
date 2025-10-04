@@ -9,6 +9,7 @@
 #include <thread>
 #include <mutex>
 #include <chrono>
+#include <utility>
 #endif
 
 namespace TSRPA
@@ -183,6 +184,8 @@ namespace TSRPA
         std::function<bool(unsigned int, float)> deep_check_func;
         DeephMode deeph_mode;
 
+    public:
+
         bool deep_check_none(unsigned int idx, float value) { return true; }
         bool deep_check_less(unsigned int idx, float value)
         {
@@ -324,7 +327,7 @@ namespace TSRPA
             return ret;
         }
 
-    public:
+    
         OcclusionDetector() {}
         OcclusionDetector(unsigned int width, unsigned int height)
         {
@@ -356,10 +359,10 @@ namespace TSRPA
         void set_zbuffer_write(bool on) { zbuffer_write = on; }
 
         glm::mat4 get_view_matrix() { return view_matrix; }
-        void set_view_matrix(glm::mat4 mat) { view_matrix = mat; }
+        void set_view_matrix(const glm::mat4 &mat) { view_matrix = mat; }
 
         glm::mat4 get_projection_matrix() { return projection_matrix; }
-        void set_projection_matrix(glm::mat4 mat) { projection_matrix = mat; }
+        void set_projection_matrix(const glm::mat4 &mat) { projection_matrix = mat; }
 
         void clear()
         {
@@ -395,70 +398,70 @@ namespace TSRPA
         BACK = 2
     };
 
-
-
-    class Renderer{
+    class Renderer
+    {
     protected:
-        virtual bool deep_check_none(unsigned int idx, float value) {return false;}
-        virtual bool deep_check_less(unsigned int idx, float value){return false;}
+        virtual bool deep_check_none(unsigned int idx, float value) { return false; }
+        virtual bool deep_check_less(unsigned int idx, float value) { return false; }
 
-        virtual bool deep_check_greater(unsigned int idx, float value){return false;}
+        virtual bool deep_check_greater(unsigned int idx, float value) { return false; }
 
-        virtual bool calculate_deep_check(unsigned int idx, float value){return false;}
+        virtual bool calculate_deep_check(unsigned int idx, float value) { return false; }
 
-        virtual void clear_zbuffer(){}
+        virtual void clear_zbuffer() {}
 
-        virtual glm::vec3 calculate_screen_position(const glm::vec3 &vertex, const glm::mat4 &model_transform_matrix){return glm::vec3(0.0f);}
+        virtual glm::vec3 calculate_screen_position(const glm::vec3 &vertex, const glm::mat4 &model_transform_matrix) { return glm::vec3(0.0f); }
 
-        virtual glm::vec3 calculate_screen_position_from_point(const glm::vec4 &pos){return glm::vec4(0.0f);}
+        virtual glm::vec3 calculate_screen_position_from_point(const glm::vec4 &pos) { return glm::vec4(0.0f); }
 
-        virtual glm::vec3 barycentric(const glm::vec3 *pts, const glm::vec3 &P){return glm::vec3(0.0f);}
+        virtual glm::vec3 barycentric(const glm::vec3 *pts, const glm::vec3 &P) { return glm::vec3(0.0f); }
 
-        virtual void draw_shaded_triangle(MeshBase &mesh, const unsigned int face_id, Material &material, const glm::mat4 &transform, const glm::mat3 &normal_matrix){}
-
-        virtual glm::ivec4 frame_buffer_get_color(const unsigned int &x, const unsigned int &y){return glm::ivec4(0.0f);}
+        virtual void draw_shaded_triangle(MeshBase &mesh, const unsigned int face_id, Material &material, const glm::mat4 &transform, const glm::mat3 &normal_matrix) {}
 
     public:
-        virtual glm::ivec4 get_clear_color() {return glm::ivec4(0.0f);}
+
+        virtual glm::ivec4 frame_buffer_get_color(const unsigned int &x, const unsigned int &y) { return glm::ivec4(0.0f); }
+
+        virtual glm::ivec4 get_clear_color() { return glm::ivec4(0.0f); }
         virtual void set_clear_color(glm::ivec4 color) {}
 
-        virtual ShowFaces get_face_mode() {return ShowFaces::BACK;}
+        virtual ShowFaces get_face_mode() { return ShowFaces::BACK; }
         virtual void set_face_mode(ShowFaces mode) {}
 
-        virtual glm::mat4 get_view_matrix() {return glm::mat4(0.0f);}
+        virtual glm::mat4 get_view_matrix() { return glm::mat4(0.0f); }
         virtual void set_view_matrix(const glm::mat4 &mat) {}
 
-        virtual glm::mat4 get_projection_matrix() {return glm::mat4(0.0f);}
+        virtual glm::mat4 get_projection_matrix() { return glm::mat4(0.0f); }
         virtual void set_projection_matrix(const glm::mat4 &mat) {}
 
-        virtual unsigned int get_width() {return 0;}
-        virtual unsigned int get_height() {return 0;}
+        virtual unsigned int get_width() { return 0; }
+        virtual unsigned int get_height() { return 0; }
 
-        virtual bool get_zbuffer_write() {return false;}
+        virtual bool get_zbuffer_write() { return false; }
         virtual void set_zbuffer_write(bool on) {}
 
-        virtual DeephMode get_deeph_mode() {return DeephMode::NONE;}
-        virtual void set_deeph_mode(DeephMode mode){}
+        virtual DeephMode get_deeph_mode() { return DeephMode::NONE; }
+        virtual void set_deeph_mode(DeephMode mode) {}
 
         Renderer() {}
 
-        virtual unsigned char *get_result(){return NULL;}
+        virtual unsigned char *get_result() { return NULL; }
 
-        virtual void clear_frame_buffer(){}
+        virtual void clear_frame_buffer() {}
 
-        virtual void clear(){}
+        virtual void clear() {}
 
-        virtual void draw_point(const unsigned int &x, const unsigned int &y, const glm::ivec4 &color){}
+        virtual void draw_point(const unsigned int &x, const unsigned int &y, const glm::ivec4 &color) {}
 
-        virtual void draw_texture(TSRPA::Texture &texture, const glm::ivec2 &offset){}
+        virtual void draw_texture(TSRPA::Texture &texture, const glm::ivec2 &offset) {}
 
-        virtual void draw_line(glm::ivec2 a, glm::ivec2 b, const glm::ivec4 &color){}
+        virtual void draw_line(glm::ivec2 a, glm::ivec2 b, const glm::ivec4 &color) {}
 
-        virtual void draw_triangle_wire_frame(const glm::ivec2 &a, const glm::ivec2 &b, const glm::ivec2 &c, const glm::ivec4 &color){}
+        virtual void draw_triangle_wire_frame(const glm::ivec2 &a, const glm::ivec2 &b, const glm::ivec2 &c, const glm::ivec4 &color) {}
 
-        virtual void draw_basic_triangle(glm::ivec2 a, glm::ivec2 b, glm::ivec2 c, const glm::ivec4 &color){}
+        virtual void draw_basic_triangle(glm::ivec2 a, glm::ivec2 b, glm::ivec2 c, const glm::ivec4 &color) {}
 
-        virtual void draw_shaded_mesh(MeshBase &mesh, Material &material, glm::mat4 &transform){}
+        virtual void draw_shaded_mesh(MeshBase &mesh, Material &material, glm::mat4 &transform) {}
     };
 
     class SingleThreadRenderer : public Renderer
@@ -479,6 +482,8 @@ namespace TSRPA
         std::function<bool(unsigned int, float)> deep_check_func;
         std::vector<float> zbuffer;
         bool zbuffer_write = true;
+
+        public:
 
         bool deep_check_none(unsigned int idx, float value) { return true; }
         bool deep_check_less(unsigned int idx, float value)
@@ -681,13 +686,17 @@ namespace TSRPA
             }
         }
 
+        
+
+    
+
+
         glm::ivec4 frame_buffer_get_color(const unsigned int &x, const unsigned int &y)
         {
             unsigned int i = ((y % height) * width + (x % width)) * 4;
             return glm::ivec4(frame_buffer[i], frame_buffer[i + 1], frame_buffer[i + 2], frame_buffer[i + 3]);
         }
 
-    public:
         glm::ivec4 get_clear_color() { return clear_color; }
         void set_clear_color(glm::ivec4 color) { clear_color = color; }
 
@@ -869,8 +878,6 @@ namespace TSRPA
 #ifdef TSRPA_MULT_THREAD_RENDERER
 
     
-    
-    
     template <typename T>
     class MutexLockedValue
     {
@@ -933,7 +940,7 @@ namespace TSRPA
         }
     };
 
-    
+    /*
     class MultThreadRenderer : public SingleThreadRenderer
     {
     protected:
@@ -1150,59 +1157,248 @@ namespace TSRPA
             return &frame_buffer[0];
         }
     };
+
     
-    /*
-    
+
     class MultThreadRenderer : public SingleThreadRenderer
     {
     protected:
-
         std::vector<SingleThreadRenderer> renderes;
-
-        
-        //bool deep_check_none(unsigned int idx, float value) {return false;}
-        //bool deep_check_less(unsigned int idx, float value){return false;}
-
-        //bool deep_check_greater(unsigned int idx, float value){return false;}
-
-        //bool calculate_deep_check(unsigned int idx, float value){return false;}
-
-        //void clear_zbuffer(){}
-
-        //void draw_shaded_triangle(MeshBase &mesh, const unsigned int face_id, Material &material, const glm::mat4 &transform, const glm::mat3 &normal_matrix){}
-
-        //glm::ivec4 frame_buffer_get_color(const unsigned int &x, const unsigned int &y){return glm::ivec4(0.0f);}
-        
 
     public:
 
-        MultThreadRenderer(unsigned int width, unsigned int height) : SingleThreadRenderer(width,height) {}
+    
+
+        void clear_zbuffer()
+        {
+            SingleThreadRenderer::clear_zbuffer();
+            std::vector<std::thread> threads;
+            threads.reserve(4);
+
+            for (int i = 0 ; i < renderes.size() ; i++)
+            {
+                std::thread t(&SingleThreadRenderer::clear_zbuffer, &renderes[i]);
+                threads.push_back(std::move(t));
+            }
+
+            for (std::thread &t : threads)
+            {
+                t.join();
+            }
+        }
+
+        void draw_shaded_triangle(MeshBase &mesh, const unsigned int face_id, Material &material, const glm::mat4 &transform, const glm::mat3 &normal_matrix)
+        {
+            std::vector<std::thread> threads;
+            threads.reserve(4);
+
+            for (int i = 0 ; i < renderes.size() ; i++)
+            {
+                std::thread t(&SingleThreadRenderer::draw_shaded_triangle,&renderes[i], std::ref(mesh), face_id, std::ref(material), std::ref(transform), std::ref(normal_matrix));
+                threads.push_back(std::move(t));
+            }
+
+            for (std::thread &t : threads)
+            {
+                t.join();
+            }
+        }
+        
+
+    
+        MultThreadRenderer(unsigned int width, unsigned int height) : SingleThreadRenderer(width, height)
+        {
+
+            for (int i = 0; i < 4 ; i++){
+                renderes.push_back(SingleThreadRenderer(width / 2, height / 2));
+            }
+            
+        }
 
         
-        //void set_clear_color(glm::ivec4 color) {}
 
-        //void set_face_mode(ShowFaces mode) {}
+        void set_clear_color(glm::ivec4 color)
+        {
+            SingleThreadRenderer::set_clear_color(color);
 
-        //void set_view_matrix(glm::mat4 mat) {}
+            for (int i = 0 ; i < renderes.size() ; i++)
+            {
+                renderes[i].set_clear_color(color);
+            }
+        }
 
-        //void set_projection_matrix(glm::mat4 mat) {}
+        
 
-        //void set_zbuffer_write(bool on) {}
+        void set_face_mode(ShowFaces mode)
+        {
+            SingleThreadRenderer::set_face_mode(mode);
 
-        //void set_deeph_mode(DeephMode mode){}
+            for (int i = 0 ; i < renderes.size() ; i++)
+            {
+                renderes[i].set_face_mode(mode);
+            }
+        }
 
-        //void clear_frame_buffer(){}
+        void set_view_matrix(const glm::mat4 &mat)
+        {
+            SingleThreadRenderer::set_view_matrix(mat);
 
-        //void clear(){}
+            for (int i = 0 ; i < renderes.size() ; i++)
+            {
+                renderes[i].set_view_matrix(mat);
+            }
+        }
 
-        //void draw_triangle_wire_frame(const glm::ivec2 &a, const glm::ivec2 &b, const glm::ivec2 &c, const glm::ivec4 &color){}
+        void set_projection_matrix(glm::mat4 mat) // <-- TO FIX
+        {
+            SingleThreadRenderer::set_projection_matrix(mat);
 
-        //void draw_basic_triangle(glm::ivec2 a, glm::ivec2 b, glm::ivec2 c, const glm::ivec4 &color){}
+            for (int i = 0 ; i < renderes.size() ; i++)
+            {
+                renderes[i].set_projection_matrix(mat);
+            }
+        }
 
-        //void draw_shaded_mesh(MeshBase &mesh, Material &material, glm::mat4 &transform){}
+        void set_zbuffer_write(bool on)
+        {
+            SingleThreadRenderer::set_zbuffer_write(on);
+
+            for (int i = 0 ; i < renderes.size() ; i++)
+            {
+                renderes[i].set_zbuffer_write(on);
+            }
+        }
+
+        void set_deeph_mode(DeephMode mode)
+        {
+            SingleThreadRenderer::set_deeph_mode(mode);
+
+            for (int i = 0 ; i < renderes.size() ; i++)
+            {
+                renderes[i].set_deeph_mode(mode);
+            }
+        }
+
+        
+
+        void clear_frame_buffer()
+        {
+            SingleThreadRenderer::clear_frame_buffer();
+            std::vector<std::thread> threads;
+            threads.reserve(4);
+
+            for (int i = 0 ; i < renderes.size() ; i++)
+            {
+                threads.push_back(std::thread(&SingleThreadRenderer::clear_frame_buffer,&renderes[i]));
+            }
+
+            for (std::thread &t : threads)
+            {
+                t.join();
+            }
+        }
+
+        
+
+        void clear()
+        {
+            SingleThreadRenderer::clear();
+            std::vector<std::thread> threads;
+            threads.reserve(4);
+
+            for (int i = 0 ; i < renderes.size() ; i++)
+            {
+                threads.push_back(std::thread(&SingleThreadRenderer::clear,&renderes[i]));
+            }
+
+            for (std::thread &t : threads)
+            {
+                t.join();
+            }
+        }
+
+        
+
+        void draw_triangle_wire_frame(const glm::ivec2 &a, const glm::ivec2 &b, const glm::ivec2 &c, const glm::ivec4 &color)
+        {
+            std::vector<std::thread> threads;
+            threads.reserve(4);
+
+            for (int i = 0 ; i < renderes.size() ; i++)
+            {
+                threads.push_back(std::thread(&SingleThreadRenderer::draw_triangle_wire_frame,&renderes[i], a, b, c, color));
+            }
+
+            for (std::thread &t : threads)
+            {
+                t.join();
+            }
+        }
+
+        
+
+        void draw_basic_triangle(glm::ivec2 a, glm::ivec2 b, glm::ivec2 c, const glm::ivec4 &color)
+        {
+            std::vector<std::thread> threads;
+            threads.reserve(4);
+
+            for (int i = 0 ; i < renderes.size() ; i++)
+            {
+                threads.push_back(std::thread(&SingleThreadRenderer::draw_basic_triangle,&renderes[i], a, b, c, color));
+            }
+
+            for (std::thread &t : threads)
+            {
+                t.join();
+            }
+        }
+
+        
+        void draw_shaded_mesh(MeshBase &mesh, Material &material, glm::mat4 &transform)
+        {
+            std::vector<std::thread> threads;
+            threads.reserve(4);
+
+            for (int i = 0 ; i < renderes.size() ; i++)
+            {
+                std::thread t(&SingleThreadRenderer::draw_shaded_mesh,&renderes[i],std::ref(mesh), std::ref(material), std::ref(transform));
+                threads.push_back(std::move(t));
+            }
+
+            for (std::thread &t : threads)
+            {
+                t.join();
+            }
+        }
+        
+
+        void assembley_frame(TSRPA::SingleThreadRenderer &renderer, const glm::ivec2 &offset)
+        {
+            for (unsigned int x = 0; x < std::min(renderer.get_width(), width + offset.x); x++)
+            {
+                for (unsigned int y = 0; y < std::min(renderer.get_height(), height + offset.y); y++)
+                {
+                    SingleThreadRenderer::draw_point(x + offset.x, y + offset.y, renderer.frame_buffer_get_color(x, y));
+                }
+            }
+        }
+
+        
+
+        unsigned char *get_result()
+        {
+
+            assembley_frame(renderes[0], glm::ivec2(0, 0));
+            assembley_frame(renderes[1], glm::ivec2(width/2, 0));
+            assembley_frame(renderes[1], glm::ivec2(0, height/2));
+            assembley_frame(renderes[1], glm::ivec2(width/2, height/2));
+
+            return &frame_buffer[0];
+        }
         
     };
+
     */
 
-    #endif
+#endif
 };
