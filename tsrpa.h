@@ -10,6 +10,10 @@
 #include <mutex>
 #include <chrono>
 #include <utility>
+
+#include <future>
+#include <condition_variable>
+#include <queue>
 #endif
 
 namespace TSRPA
@@ -185,7 +189,6 @@ namespace TSRPA
         DeephMode deeph_mode;
 
     public:
-
         bool deep_check_none(unsigned int idx, float value) { return true; }
         bool deep_check_less(unsigned int idx, float value)
         {
@@ -327,7 +330,6 @@ namespace TSRPA
             return ret;
         }
 
-    
         OcclusionDetector() {}
         OcclusionDetector(unsigned int width, unsigned int height)
         {
@@ -419,7 +421,6 @@ namespace TSRPA
         virtual void draw_shaded_triangle(MeshBase &mesh, const unsigned int face_id, Material &material, const glm::mat4 &transform, const glm::mat3 &normal_matrix) {}
 
     public:
-
         virtual glm::ivec4 frame_buffer_get_color(const unsigned int &x, const unsigned int &y) { return glm::ivec4(0.0f); }
 
         virtual glm::ivec4 get_clear_color() { return glm::ivec4(0.0f); }
@@ -483,8 +484,7 @@ namespace TSRPA
         std::vector<float> zbuffer;
         bool zbuffer_write = true;
 
-        public:
-
+    public:
         bool deep_check_none(unsigned int idx, float value) { return true; }
         bool deep_check_less(unsigned int idx, float value)
         {
@@ -685,11 +685,6 @@ namespace TSRPA
                 }
             }
         }
-
-        
-
-    
-
 
         glm::ivec4 frame_buffer_get_color(const unsigned int &x, const unsigned int &y)
         {
@@ -940,7 +935,7 @@ namespace TSRPA
         }
     };
 
-    /*
+
     class MultThreadRenderer : public SingleThreadRenderer
     {
     protected:
@@ -1159,246 +1154,6 @@ namespace TSRPA
     };
 
     
-
-    class MultThreadRenderer : public SingleThreadRenderer
-    {
-    protected:
-        std::vector<SingleThreadRenderer> renderes;
-
-    public:
-
-    
-
-        void clear_zbuffer()
-        {
-            SingleThreadRenderer::clear_zbuffer();
-            std::vector<std::thread> threads;
-            threads.reserve(4);
-
-            for (int i = 0 ; i < renderes.size() ; i++)
-            {
-                std::thread t(&SingleThreadRenderer::clear_zbuffer, &renderes[i]);
-                threads.push_back(std::move(t));
-            }
-
-            for (std::thread &t : threads)
-            {
-                t.join();
-            }
-        }
-
-        void draw_shaded_triangle(MeshBase &mesh, const unsigned int face_id, Material &material, const glm::mat4 &transform, const glm::mat3 &normal_matrix)
-        {
-            std::vector<std::thread> threads;
-            threads.reserve(4);
-
-            for (int i = 0 ; i < renderes.size() ; i++)
-            {
-                std::thread t(&SingleThreadRenderer::draw_shaded_triangle,&renderes[i], std::ref(mesh), face_id, std::ref(material), std::ref(transform), std::ref(normal_matrix));
-                threads.push_back(std::move(t));
-            }
-
-            for (std::thread &t : threads)
-            {
-                t.join();
-            }
-        }
-        
-
-    
-        MultThreadRenderer(unsigned int width, unsigned int height) : SingleThreadRenderer(width, height)
-        {
-
-            for (int i = 0; i < 4 ; i++){
-                renderes.push_back(SingleThreadRenderer(width / 2, height / 2));
-            }
-            
-        }
-
-        
-
-        void set_clear_color(glm::ivec4 color)
-        {
-            SingleThreadRenderer::set_clear_color(color);
-
-            for (int i = 0 ; i < renderes.size() ; i++)
-            {
-                renderes[i].set_clear_color(color);
-            }
-        }
-
-        
-
-        void set_face_mode(ShowFaces mode)
-        {
-            SingleThreadRenderer::set_face_mode(mode);
-
-            for (int i = 0 ; i < renderes.size() ; i++)
-            {
-                renderes[i].set_face_mode(mode);
-            }
-        }
-
-        void set_view_matrix(const glm::mat4 &mat)
-        {
-            SingleThreadRenderer::set_view_matrix(mat);
-
-            for (int i = 0 ; i < renderes.size() ; i++)
-            {
-                renderes[i].set_view_matrix(mat);
-            }
-        }
-
-        void set_projection_matrix(glm::mat4 mat) // <-- TO FIX
-        {
-            SingleThreadRenderer::set_projection_matrix(mat);
-
-            for (int i = 0 ; i < renderes.size() ; i++)
-            {
-                renderes[i].set_projection_matrix(mat);
-            }
-        }
-
-        void set_zbuffer_write(bool on)
-        {
-            SingleThreadRenderer::set_zbuffer_write(on);
-
-            for (int i = 0 ; i < renderes.size() ; i++)
-            {
-                renderes[i].set_zbuffer_write(on);
-            }
-        }
-
-        void set_deeph_mode(DeephMode mode)
-        {
-            SingleThreadRenderer::set_deeph_mode(mode);
-
-            for (int i = 0 ; i < renderes.size() ; i++)
-            {
-                renderes[i].set_deeph_mode(mode);
-            }
-        }
-
-        
-
-        void clear_frame_buffer()
-        {
-            SingleThreadRenderer::clear_frame_buffer();
-            std::vector<std::thread> threads;
-            threads.reserve(4);
-
-            for (int i = 0 ; i < renderes.size() ; i++)
-            {
-                threads.push_back(std::thread(&SingleThreadRenderer::clear_frame_buffer,&renderes[i]));
-            }
-
-            for (std::thread &t : threads)
-            {
-                t.join();
-            }
-        }
-
-        
-
-        void clear()
-        {
-            SingleThreadRenderer::clear();
-            std::vector<std::thread> threads;
-            threads.reserve(4);
-
-            for (int i = 0 ; i < renderes.size() ; i++)
-            {
-                threads.push_back(std::thread(&SingleThreadRenderer::clear,&renderes[i]));
-            }
-
-            for (std::thread &t : threads)
-            {
-                t.join();
-            }
-        }
-
-        
-
-        void draw_triangle_wire_frame(const glm::ivec2 &a, const glm::ivec2 &b, const glm::ivec2 &c, const glm::ivec4 &color)
-        {
-            std::vector<std::thread> threads;
-            threads.reserve(4);
-
-            for (int i = 0 ; i < renderes.size() ; i++)
-            {
-                threads.push_back(std::thread(&SingleThreadRenderer::draw_triangle_wire_frame,&renderes[i], a, b, c, color));
-            }
-
-            for (std::thread &t : threads)
-            {
-                t.join();
-            }
-        }
-
-        
-
-        void draw_basic_triangle(glm::ivec2 a, glm::ivec2 b, glm::ivec2 c, const glm::ivec4 &color)
-        {
-            std::vector<std::thread> threads;
-            threads.reserve(4);
-
-            for (int i = 0 ; i < renderes.size() ; i++)
-            {
-                threads.push_back(std::thread(&SingleThreadRenderer::draw_basic_triangle,&renderes[i], a, b, c, color));
-            }
-
-            for (std::thread &t : threads)
-            {
-                t.join();
-            }
-        }
-
-        
-        void draw_shaded_mesh(MeshBase &mesh, Material &material, glm::mat4 &transform)
-        {
-            std::vector<std::thread> threads;
-            threads.reserve(4);
-
-            for (int i = 0 ; i < renderes.size() ; i++)
-            {
-                std::thread t(&SingleThreadRenderer::draw_shaded_mesh,&renderes[i],std::ref(mesh), std::ref(material), std::ref(transform));
-                threads.push_back(std::move(t));
-            }
-
-            for (std::thread &t : threads)
-            {
-                t.join();
-            }
-        }
-        
-
-        void assembley_frame(TSRPA::SingleThreadRenderer &renderer, const glm::ivec2 &offset)
-        {
-            for (unsigned int x = 0; x < std::min(renderer.get_width(), width + offset.x); x++)
-            {
-                for (unsigned int y = 0; y < std::min(renderer.get_height(), height + offset.y); y++)
-                {
-                    SingleThreadRenderer::draw_point(x + offset.x, y + offset.y, renderer.frame_buffer_get_color(x, y));
-                }
-            }
-        }
-
-        
-
-        unsigned char *get_result()
-        {
-
-            assembley_frame(renderes[0], glm::ivec2(0, 0));
-            assembley_frame(renderes[1], glm::ivec2(width/2, 0));
-            assembley_frame(renderes[1], glm::ivec2(0, height/2));
-            assembley_frame(renderes[1], glm::ivec2(width/2, height/2));
-
-            return &frame_buffer[0];
-        }
-        
-    };
-
-    */
 
 #endif
 };

@@ -119,10 +119,10 @@ int main(int argc, char *argv[])
     ren.set_clear_color(TSRPA::Palette::INVISIBLE);
     ren.clear();
 
-    ren.draw_point(0, 0, TSRPA::Palette::GREEN);
-    ren.draw_point(255, 0, TSRPA::Palette::GREEN);
-    ren.draw_point(0, 255, TSRPA::Palette::GREEN);
-    ren.draw_point(255, 255, TSRPA::Palette::GREEN);
+    //ren.draw_point(0, 0, TSRPA::Palette::GREEN);
+    //ren.draw_point(255, 0, TSRPA::Palette::GREEN);
+    //ren.draw_point(0, 255, TSRPA::Palette::GREEN);
+    //ren.draw_point(255, 255, TSRPA::Palette::GREEN);
 
     const unsigned int pich = ren.get_width() * 4;
 
@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
         glm::vec3(0.0f, 1.0f, 0.0f)));;
     
     occluder.set_view_matrix(ren.get_view_matrix());
-    // Matriz de Projeção
+    
     ren.set_projection_matrix(glm::perspective(
         glm::radians(45.0f),
         float(ren.get_width()) / float(ren.get_height()),
