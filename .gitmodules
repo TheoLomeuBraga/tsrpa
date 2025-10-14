@@ -10,3 +10,7 @@
 [submodule "examples_test/libs/SDL_ttf"]
 	path = examples_test/libs/SDL_ttf
 	url = https://github.com/libsdl-org/SDL_ttf.git
+
+[submodule "examples_test/libs/freetype"]
+	path = examples_test/libs/freetype
+	url = https://github.com/freetype/freetype.git
