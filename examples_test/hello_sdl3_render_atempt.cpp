@@ -292,7 +292,7 @@ int main(int argc, char *argv[])
             fps_frames_passed = 0;
         }
         print_mesage(render, font, fps_text);
-
+        SDL_RenderClear(render);
         SDL_RenderPresent(render);
     }
 
