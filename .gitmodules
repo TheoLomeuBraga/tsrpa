@@ -14,6 +14,3 @@
 [submodule "examples_test/libs/freetype"]
 	path = examples_test/libs/freetype
 	url = https://github.com/freetype/freetype.git
-[submodule "examples_test/libs/libpng"]
-	path = examples_test/libs/libpng
-	url = https://github.com/pnggroup/libpng.git
