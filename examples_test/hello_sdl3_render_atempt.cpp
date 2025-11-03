@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
     //TSRPA::MultThreadRenderer ren(512, 512);
     TSRPA::MultThreadRenderer ren(256, 256);
     TSRPA::OcclusionDetector occluder(64,64);
-    ren.set_clear_color(TSRPA::Palette::INVISIBLE);
+    ren.set_clear_color(TSRPA::Palette::BLACK);
     ren.clear();
 
     //ren.draw_point(0, 0, TSRPA::Palette::GREEN);
@@ -233,7 +233,7 @@ int main(int argc, char *argv[])
         if (last_mesh.is_valid() )
         {
             
-            ren.set_clear_color(TSRPA::Palette::INVISIBLE);
+            ren.set_clear_color(TSRPA::Palette::BLACK);
             ren.clear();
             occluder.clear();
 
@@ -292,7 +292,7 @@ int main(int argc, char *argv[])
             fps_frames_passed = 0;
         }
         print_mesage(render, font, fps_text);
-        SDL_RenderClear(render);
+        
         SDL_RenderPresent(render);
     }
 
